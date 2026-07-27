@@ -51,7 +51,6 @@ Agent Framework Python 代码
 | `scripts/get-lab-context.ps1` | 自动发现当前 azd/Azure 环境资源名称 |
 | `scripts/connect-observability.ps1` | 动态连接当前环境的 Application Insights |
 | `scripts/apply-hosted-agent-guardrail.ps1` | Hosted Agent Guardrail REST 回退脚本 |
-| `scripts/requirements-docs.txt` | 生成参考资料 PDF 所需的独立 Python 依赖 |
 | `src/agent-framework-agent-basic-responses/eval-security.yaml` | 可复用的质量与安全评估配置 |
 | `tests/test_project_contract.py` | 不调用 Azure 的项目契约测试 |
 
@@ -102,14 +101,6 @@ azd ai agent eval run
 ```
 
 性能、安全、Portal/CLI 评估、追踪、监控、AI 红队测试与防护栏的完整步骤见两份参考手册。
-
-重新生成 PDF 时，使用独立环境安装文档工具依赖：
-
-```powershell
-python -m venv .venv-docs
-.\.venv-docs\Scripts\python.exe -m pip install -r .\scripts\requirements-docs.txt
-.\.venv-docs\Scripts\python.exe .\scripts\render_reference_docs.py .\docs\xAgent_Foundry构建部署与测试参考手册_v1.0.md .\docs\xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md
-```
 
 Observability 资源也采用动态名称：
 
