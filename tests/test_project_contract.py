@@ -10,6 +10,7 @@ MAIN = (
 ).read_text(encoding="utf-8")
 GITIGNORE = (ROOT / ".gitignore").read_text(encoding="utf-8")
 README = (ROOT / "README.md").read_text(encoding="utf-8")
+MACOS_README = (ROOT / "README_macOS.md").read_text(encoding="utf-8")
 REFERENCE_MANUAL = (
     ROOT / "docs" / "xAgent_Foundry构建部署与测试参考手册_v1.0.md"
 ).read_text(encoding="utf-8")
@@ -64,6 +65,64 @@ class ProjectContractTests(unittest.TestCase):
             if anchor:
                 target_text = target_path.read_text(encoding="utf-8")
                 self.assertIn(f'<a id="{anchor}"></a>', target_text)
+
+    def test_readme_macos_training_flow_is_safe_and_reproducible(self):
+        macos_section = MACOS_README.split("## macOS 快速开始", 1)[1].split(
+            "## 获取自己的训练环境", 1
+        )[0]
+
+        ordered_steps = [
+            'az account set --subscription "<讲师提供的订阅名称或 ID>"',
+            'export AZURE_TENANT_ID="$(az account show --query tenantId --output tsv)"',
+            'azd auth login --tenant-id "$AZURE_TENANT_ID"',
+            'azd auth token --tenant-id "$AZURE_TENANT_ID" >/dev/null',
+            "azd extension install azure.ai.agents --no-prompt",
+            'azd env new "$LAB_ENV_NAME"',
+            "azd provision --preview --no-prompt",
+            "azd provision --no-prompt",
+            'export FOUNDRY_PROJECT_ENDPOINT="$(azd env get-value FOUNDRY_PROJECT_ENDPOINT)"',
+            "azd env get-value AI_PROJECT_DEPLOYMENTS",
+            "azd ai agent run --no-client",
+            "azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME",
+            "azd env set AZURE_AI_RAI_POLICY_ID",
+            "azd deploy --no-prompt",
+            "azd ai agent show --output json",
+            "azd ai agent invoke --new-session",
+            "azd ai agent monitor --tail 100",
+            'azd ai agent invoke \\\n  --session-id "<错误输出中的 Session ID>"',
+        ]
+        offsets = [macos_section.index(step) for step in ordered_steps]
+        self.assertEqual(sorted(offsets), offsets)
+
+        self.assertNotIn("azd provision --no-state", macos_section)
+        self.assertNotIn("azd down --purge --force", MACOS_README)
+        self.assertNotIn("pwsh", MACOS_README)
+        self.assertNotIn("powershell", MACOS_README.lower())
+        self.assertNotIn(".ps1", MACOS_README.lower())
+        self.assertIn(
+            ': "${AZURE_AI_MODEL_DEPLOYMENT_NAME:?当前 azd 环境没有模型部署}"',
+            macos_section,
+        )
+        self.assertIn(
+            'assert model, "Hosted Agent 的模型部署名称为空"',
+            macos_section,
+        )
+        monitor_offset = macos_section.index("azd ai agent monitor --tail 100")
+        token_preflight_offset = macos_section.index(
+            'azd auth token --tenant-id "$AZURE_TENANT_ID" >/dev/null',
+            monitor_offset,
+        )
+        monitor_retry_offset = macos_section.index(
+            "azd ai agent monitor --tail 100",
+            monitor_offset + 1,
+        )
+        self.assertLess(monitor_offset, token_preflight_offset)
+        self.assertLess(token_preflight_offset, monitor_retry_offset)
+        self.assertIn("az deployment group what-if", macos_section)
+        self.assertIn(
+            "--config src/agent-framework-agent-basic-responses/eval-security.yaml",
+            macos_section,
+        )
 
 
 if __name__ == "__main__":
