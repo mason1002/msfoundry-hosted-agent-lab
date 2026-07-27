@@ -2,6 +2,28 @@
 
 本项目用于演示如何使用 Microsoft Agent Framework、Microsoft Foundry 和 Azure Developer CLI 完成 Agent 的构建、本地测试、托管部署、远程调用与评估。
 
+## 文档导航
+
+| 文档 | Markdown | PDF |
+| --- | --- | --- |
+| Foundry 构建、托管部署与测试培训手册 | [在线阅读](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.pdf) |
+| 性能、安全、遥测与 Guardrails 实验手册 | [在线阅读](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
+
+### 按任务快速跳转
+
+| 我想做什么 | 直接进入主手册 |
+| --- | --- |
+| 了解架构与组件职责 | [总体架构](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md#architecture) |
+| 本地运行与 Prompt 调试 | [本地运行与调试](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md#local-debug) |
+| 部署并调用 Hosted Agent | [托管部署](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md#hosted-deployment) |
+| 执行 Agent Prompt Smoke Test | [Prompt 测试](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md#prompt-testing) |
+| 执行批量质量与安全评估 | [Evaluation](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md#evaluation) |
+| 查看 Agent Session 日志 | [Hosted Session 日志](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md#agent-session-logs) |
+| 查看 Foundry Trace 与 Span | [Foundry Portal Trace](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md#agent-traces) |
+| 查看 Monitor 指标与告警 | [Agent Monitoring Dashboard](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md#agent-monitoring) |
+| 配置并验证 Guardrails | [Guardrails](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md#guardrails) |
+| 执行性能与负载测试 | [性能测试](docs/xAgent_Foundry构建部署与测试培训手册_v1.0.md#performance-testing) |
+
 ## 技术路径
 
 ```text

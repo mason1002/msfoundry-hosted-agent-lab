@@ -9,6 +9,7 @@ MAIN = (
     ROOT / "src" / "agent-framework-agent-basic-responses" / "main.py"
 ).read_text(encoding="utf-8")
 GITIGNORE = (ROOT / ".gitignore").read_text(encoding="utf-8")
+README = (ROOT / "README.md").read_text(encoding="utf-8")
 TRAINING_MANUAL = (
     ROOT / "docs" / "xAgent_Foundry构建部署与测试培训手册_v1.0.md"
 ).read_text(encoding="utf-8")
@@ -52,6 +53,17 @@ class ProjectContractTests(unittest.TestCase):
         anchors = set(re.findall(r'<a id="([A-Za-z0-9_-]+)"></a>', TRAINING_MANUAL))
         self.assertGreaterEqual(len(links), 12)
         self.assertEqual(set(), links - anchors)
+
+    def test_readme_document_navigation_targets_exist(self):
+        links = re.findall(r"\]\((docs/[^)]+)\)", README)
+        self.assertGreaterEqual(len(links), 14)
+        for link in links:
+            target, _, anchor = link.partition("#")
+            target_path = ROOT / target
+            self.assertTrue(target_path.is_file(), target)
+            if anchor:
+                target_text = target_path.read_text(encoding="utf-8")
+                self.assertIn(f'<a id="{anchor}"></a>', target_text)
 
 
 if __name__ == "__main__":
