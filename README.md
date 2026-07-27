@@ -62,7 +62,18 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
 | `infra/observability.bicep` | Application Insights 与 Log Analytics |
 | `scripts/get-lab-context.ps1` | 自动发现当前 azd/Azure 环境资源名称 |
 | `scripts/connect-observability.ps1` | 动态连接当前环境的 Application Insights |
+| `scripts/show_context.py` | 跨平台显示当前 azd/Foundry/Agent 上下文 |
+| `scripts/connect_observability.py` | 跨平台连接 App Insights 并配置 Project MI 权限 |
 | `scripts/apply-hosted-agent-guardrail.ps1` | Hosted Agent Guardrail REST 回退脚本 |
+| `scripts/invoke_hosted.py` | 使用 Azure AI Projects SDK 调用远程 Hosted Agent |
+| `scripts/compare_agent.py` | 使用同一 JSONL 对比本地和 Hosted Agent |
+| `scripts/send_traffic.py` | 生成受控流量以填充 Trace 与 Monitor |
+| `scripts/locustfile.py` | Hosted Agent 并发负载测试 |
+| `scripts/continuous_eval.py` | 基于近期 Trace 配置持续评估 |
+| `scripts/configure_eval_alert.py` | 配置 Azure Monitor 评估通过率告警 |
+| `scripts/verify_monitoring.py` | 验证容器遥测配置与 App Insights 摄取 |
+| `scripts/run_ops.sh` | macOS/Linux 本地环境薄入口；核心逻辑仍为 Python |
+| `scripts/run_ops.cmd` | Windows 本地环境薄入口；不依赖 PowerShell |
 | `src/agent-framework-agent-basic-responses/eval-security.yaml` | 可复用的质量与安全评估配置 |
 | `tests/test_project_contract.py` | 不调用 Azure 的项目契约测试 |
 
@@ -70,7 +81,13 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
 
 每次 `azd` 初始化和 Provision 都可能生成不同的资源组、Foundry Account 后缀、Project、Agent 与监控资源名称。不要复制文档中的示例资源名。
 
-完成 Provision 后，在项目根目录执行：
+完成 Provision 后，在项目根目录执行跨平台 helper：
+
+```bash
+python scripts/show_context.py
+```
+
+Windows 也可使用原有 PowerShell helper：
 
 ```powershell
 $ctx = .\scripts\get-lab-context.ps1
@@ -93,6 +110,37 @@ $ctx | Format-List
 | 防护栏 | `Microsoft.DefaultV2` |
 
 `get-lab-context.ps1` 只读取当前 azd 环境和目标资源组。订阅 ID、资源 ID 和 endpoint 仅用于本地操作，不应粘贴到公开材料。
+
+## 跨平台测试与监控
+
+新增自动化均使用 Python，可在 Windows、macOS 和 Linux 运行。PowerShell 脚本是已有 Windows 辅助入口，
+不是 SDK 调用、Local/Hosted 对比、流量、负载测试、持续评估或告警的前置依赖。
+
+共同前提：Python 3.13、`uv`、Azure Developer CLI、有效的 `azd auth login`，以及已选择并部署过的 azd environment。
+依赖按用途拆分，避免全部安装：Hosted runtime 使用服务目录的 `requirements.txt`，DevUI 使用 `requirements-dev.txt`，
+SDK/比较/顺序流量/持续评估/告警使用根目录的 `requirements-ops.txt`，Locust 仅在压测时使用
+`requirements-load.txt`。首次运行 Ops：
+
+```bash
+uv venv .venv-local --python 3.13
+uv pip install --python .venv-local/bin/python --prerelease allow -r requirements-ops.txt
+```
+
+Windows 将 Python 路径改为 `.venv-local\Scripts\python.exe`。macOS/Linux 也可使用 `scripts/run_ops.sh` 作为薄入口。
+Windows 可使用 `scripts\run_ops.cmd`。例如：
+
+```text
+scripts\run_ops.cmd scripts\invoke_hosted.py "<prompt>"
+./scripts/run_ops.sh scripts/invoke_hosted.py "<prompt>"
+```
+
+仅在运行 Locust 前安装可选负载依赖：
+
+```bash
+uv pip install --python .venv-local/bin/python --prerelease allow -r requirements-load.txt
+```
+
+完整命令、成本控制和验证顺序见两份参考手册。
 
 ## 本地配置
 

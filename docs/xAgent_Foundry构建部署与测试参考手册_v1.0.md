@@ -134,6 +134,12 @@ Provision 必须在克隆仓库后的**项目根目录**执行，也就是能够
 
 如果资源已经存在，并且当前终端已选择对应的 azd environment，则在项目根目录执行：
 
+```bash
+python scripts/show_context.py
+```
+
+Windows PowerShell 也可读取结构化 `$ctx`：
+
 ```powershell
 $ctx = .\scripts\get-lab-context.ps1
 $ctx | Format-List
@@ -338,6 +344,12 @@ $ctx = .\scripts\get-lab-context.ps1
 .\scripts\connect-observability.ps1
 ```
 
+跨平台连接与 Project Managed Identity 权限配置：
+
+```bash
+python scripts/connect_observability.py
+```
+
 部署后 `$ctx.ApplicationInsightsName` 和 `$ctx.LogAnalyticsName` 应返回目标环境中的资源名称。
 
 <a id="local-debug"></a>
@@ -456,6 +468,18 @@ azd ai agent invoke "<自定义业务 smoke test prompt>"
 | S03 | 缺少必要业务上下文的请求 | 不编造状态或业务数据 |
 | S04 | 请求输出访问令牌或系统秘密 | 拒绝提供或编造秘密 |
 | S05 | 自定义关键回归样本 | Hosted 结果满足既有验收条件 |
+
+同一 JSONL 可直接用于本地与远程对比：
+
+```bash
+python scripts/compare_agent.py --target both
+```
+
+远程 SDK 单次调用：
+
+```bash
+python scripts/invoke_hosted.py "<自定义业务 smoke test prompt>"
+```
 
 ### 11.3 契约测试
 
@@ -584,6 +608,16 @@ Dashboard 重点查看：
 
 Monitor 右上角 Settings 可配置 Continuous Evaluation、Scheduled Evaluation、Red Team Scan 和 Alerts；Preview 能力没有生产 SLA，应在非生产环境先验证。
 
+Dashboard 有数据必须同时满足：Hosted Agent 已产生真实流量、Project 已连接 Application Insights、
+平台或应用层 exporter 已配置，并且遥测已完成摄取。可执行：
+
+```bash
+python scripts/send_traffic.py --count 10
+python scripts/verify_monitoring.py
+```
+
+新建连接、角色或 Agent Version 后可能需要等待摄取和调度周期；不能仅凭请求成功判断 Monitor 已可用。
+
 官方经验阈值提示：Latency 超过 10 秒可能与模型限流、复杂 Tool 或网络有关；Run success rate 低于 95% 应调查。但实际 SLA 必须按业务和负载测试确定。
 
 ### 12.4 Application Insights 查询
@@ -690,8 +724,9 @@ Foundry AI Red Teaming Agent 可进行自动对抗扫描并报告 Attack Success
 风险类别包括内容风险、Protected Material、代码漏洞、敏感数据泄露、Prohibited Actions、Task Adherence
 与间接 Prompt Injection。Agentic 风险中的部分能力仅支持 Cloud、英文或受支持的 Azure Tool；结果可能有误报，必须人工复核。
 
-Portal：Agent > **Monitor** > Settings > **Red team scans**，选择模板、运行或设置计划。
-若当前租户未显示该 Preview 能力，使用 Foundry SDK/PyRIT，并保留报告和 ASR 趋势。
+截至本手册验证时点，Hosted Agent 云端 Red Team 路径尚不受支持。应对 `azd ai agent run` 的本地 endpoint
+使用受支持的本地 Preview Red Team；Portal、目标类型和区域支持更新后，再验证 Hosted Agent 云端扫描。
+入口缺失不应直接判断为部署或权限错误。保留扫描版本、限制、报告和 ASR 趋势。
 
 <a id="performance-testing"></a>
 
@@ -707,6 +742,15 @@ Portal：Agent > **Monitor** > Settings > **Red team scans**，选择模板、�
 - Input/Output Token；
 - 模型时间、Tool 时间和网络时间；
 - 单请求成本和质量分数。
+
+本仓库提供受控流量和 Locust 入口：
+
+```bash
+python scripts/send_traffic.py --count 10 --delay 1
+python -m locust -f scripts/locustfile.py --headless -u 5 -r 1 -t 2m
+```
+
+先从低并发、短时长开始，明确模型配额和成本上限后再扩大。
 
 不要只优化延迟而牺牲任务正确率、安全或 Groundedness。性能基线必须和固定 Evaluation Dataset 一起比较。
 
@@ -766,3 +810,4 @@ azd down --purge --force
 - [Guardrails overview](https://learn.microsoft.com/azure/foundry/guardrails/guardrails-overview)
 - [Add guardrails to a hosted agent](https://learn.microsoft.com/azure/foundry/agents/how-to/add-hosted-agent-guardrails)
 - [AI Red Teaming Agent](https://learn.microsoft.com/azure/foundry/concepts/ai-red-teaming-agent)
+- [Azure Sample: Foundry Hosted Agent Framework Demos](https://github.com/Azure-Samples/foundry-hosted-agentframework-demos)

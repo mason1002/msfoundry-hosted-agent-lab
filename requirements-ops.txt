@@ -1,0 +1,5 @@
+-r src/agent-framework-agent-basic-responses/requirements.txt
+azure-ai-projects>=2.3.0
+azure-identity>=1.26.0b2
+python-dotenv>=1.2.2
+requests>=2.31.0

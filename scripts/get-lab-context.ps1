@@ -40,6 +40,29 @@ try {
     $agent = $null
 }
 
+if (-not $agent) {
+    $agentBindings = azd env get-values --cwd $ProjectRoot --no-prompt 2>$null |
+        Where-Object { $_ -match '^AGENT_(.+)_NAME=' } |
+        ForEach-Object {
+            $nameKey, $nameValue = $_ -split '=', 2
+            $prefix = $nameKey -replace '_NAME$', ''
+            [pscustomobject]@{
+                Name = $nameValue.Trim('"')
+                Version = Get-AzdValue "${prefix}_VERSION"
+                ResponsesEndpoint = Get-AzdValue "${prefix}_RESPONSES_ENDPOINT"
+            }
+        }
+    if (@($agentBindings).Count -eq 1) {
+        $agent = $agentBindings | Select-Object -First 1
+        $agent | Add-Member -NotePropertyName status -NotePropertyValue 'configured' -Force
+        $agent | Add-Member -NotePropertyName agent_endpoints -NotePropertyValue ([pscustomobject]@{
+            responses = $agent.ResponsesEndpoint
+        }) -Force
+        $agent | Add-Member -NotePropertyName version -NotePropertyValue $agent.Version -Force
+        $agent | Add-Member -NotePropertyName name -NotePropertyValue $agent.Name -Force
+    }
+}
+
 $deploymentName = Get-AzdValue 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
 if (-not $deploymentName) {
     $deployments = Get-AzdValue 'AI_PROJECT_DEPLOYMENTS'

@@ -1,0 +1,2 @@
+-r requirements-ops.txt
+locust>=2.31.0

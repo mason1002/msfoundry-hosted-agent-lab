@@ -47,6 +47,7 @@ class ProjectContractTests(unittest.TestCase):
             MAIN,
             re.compile(r"(?i)(api[_-]?key|access[_-]?token)\s*=\s*['\"]\S+"),
         )
+        self.assertIn("enable_sensitive_data=False", MAIN)
 
     def test_devui_reuses_the_hosted_agent_factory(self):
         self.assertIn("from main import create_agent", DEVUI)
@@ -93,6 +94,46 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("不是 Foundry 的唯一实现", REFERENCE_MANUAL)
         self.assertIn("Responses + Invocations", REFERENCE_MANUAL)
         self.assertIn("代码实现必须与 `azure.yaml` 声明的协议和版本一致", REFERENCE_MANUAL)
+
+    def test_cross_platform_operations_are_python_first(self):
+        required = (
+            "agent_ops.py",
+            "invoke_hosted.py",
+            "compare_agent.py",
+            "send_traffic.py",
+            "locustfile.py",
+            "continuous_eval.py",
+            "configure_eval_alert.py",
+            "verify_monitoring.py",
+            "sync_env.py",
+            "show_context.py",
+            "connect_observability.py",
+        )
+        scripts = ROOT / "scripts"
+        for filename in required:
+            self.assertTrue((scripts / filename).is_file(), filename)
+        self.assertTrue((scripts / "run_ops.sh").is_file())
+        self.assertTrue((scripts / "run_ops.cmd").is_file())
+
+    def test_docs_state_hosted_red_team_current_limit(self):
+        self.assertIn("Hosted Agent 云端 Red Team 路径尚不受支持", REFERENCE_MANUAL)
+        self.assertIn("本地 endpoint", REFERENCE_MANUAL)
+
+    def test_local_dependency_groups_are_separate(self):
+        service = ROOT / "src" / "agent-framework-agent-basic-responses"
+        dev = (service / "requirements-dev.txt").read_text(encoding="utf-8")
+        ops = (ROOT / "requirements-ops.txt").read_text(encoding="utf-8")
+        load = (ROOT / "requirements-load.txt").read_text(encoding="utf-8")
+        self.assertIn("agent-framework-devui", dev)
+        self.assertNotIn("locust", dev)
+        self.assertNotIn("locust", ops)
+        self.assertNotIn("agent-framework-devui", ops)
+        self.assertIn("locust", load)
+
+    def test_deployment_has_smoke_test_and_rollback(self):
+        deploy = (ROOT / "scripts" / "deploy_existing_agent.py").read_text(encoding="utf-8")
+        self.assertIn("def smoke_test(", deploy)
+        self.assertIn("Rolled back endpoint", deploy)
 
 
 if __name__ == "__main__":

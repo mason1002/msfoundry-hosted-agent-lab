@@ -1,15 +1,22 @@
 # Copyright (c) Microsoft. All rights reserved.
 
+import logging
 import os
 
 from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
+from agent_framework.observability import enable_instrumentation
 from agent_framework_foundry_hosting import ResponsesHostServer
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.monitor.opentelemetry import configure_azure_monitor
+from opentelemetry import trace
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+logger = logging.getLogger("xagent")
+logger.setLevel(logging.INFO)
 
 
 def create_agent() -> Agent:
@@ -45,6 +52,33 @@ def create_agent() -> Agent:
 
 
 def main():
+    connection_string = os.getenv("XAGENT_APPLICATIONINSIGHTS_CONNECTION_STRING")
+    if connection_string:
+        os.environ.pop("APPLICATIONINSIGHTS_CONNECTION_STRING", None)
+        configure_azure_monitor(
+            connection_string=connection_string,
+            credential=ManagedIdentityCredential(),
+            enable_live_metrics=False,
+        )
+    enable_instrumentation(enable_sensitive_data=False)
+    print(
+        "xAgent telemetry bootstrap: "
+        f"appinsights={bool(connection_string)} "
+        f"aad={bool(os.getenv('APPLICATIONINSIGHTS_AUTHENTICATION_STRING'))} "
+        f"otel_disabled={os.getenv('OTEL_SDK_DISABLED', '(unset)')} "
+        f"provider={type(trace.get_tracer_provider()).__name__}",
+        flush=True,
+    )
+    logger.info(
+        "Telemetry configured: appinsights=%s aad=%s sensitive_data=false",
+        bool(connection_string),
+        bool(os.getenv("APPLICATIONINSIGHTS_AUTHENTICATION_STRING")),
+    )
+    with trace.get_tracer("xagent.startup").start_as_current_span("xagent.startup"):
+        pass
+    provider = trace.get_tracer_provider()
+    if hasattr(provider, "force_flush"):
+        provider.force_flush(timeout_millis=10000)
     server = ResponsesHostServer(create_agent())
     server.run()
 
