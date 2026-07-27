@@ -20,7 +20,7 @@ param retentionInDays int = 30
 
 var tags = {
   workload: workloadName
-  environment: 'training'
+  environment: 'lab'
   managedBy: 'bicep'
 }
 

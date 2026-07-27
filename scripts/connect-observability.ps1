@@ -5,14 +5,14 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$context = & (Join-Path $PSScriptRoot 'get-training-context.ps1') `
+$context = & (Join-Path $PSScriptRoot 'get-lab-context.ps1') `
     -ProjectRoot $ProjectRoot
 
 if (-not $context.FoundryProjectId) {
     throw 'Foundry project was not found. Run azd provision first.'
 }
 if (-not $context.ApplicationInsightsId) {
-    throw 'Application Insights was not found in the training resource group.'
+    throw 'Application Insights was not found in the lab resource group.'
 }
 
 if (-not $ConnectionName) {

@@ -4,8 +4,8 @@
 
 适用对象：Agent 开发、测试、安全与运维人员
 
-定位：课后可选扩展实验，不计入 60 分钟主培训
-建议时长：按需选择，每个实验约 10–20 分钟
+定位：按需选读的性能、安全、遥测与 Guardrails 扩展实验
+单项实验参考耗时：约 10–20 分钟
 
 ---
 
@@ -23,7 +23,7 @@
 
 所有攻击样本必须使用合成数据，不使用真实 Token、个人数据、客户数据或生产 Tool。
 
-本手册不要求在一次课堂中全部完成。建议根据角色选择：
+本手册不要求一次完成。可根据角色选择：
 
 - 开发人员：实验零、一、二、四；
 - 测试人员：实验四、六、八；
@@ -35,7 +35,7 @@
 先在项目根目录发现当前环境：
 
 ```powershell
-$ctx = .\scripts\get-training-context.ps1
+$ctx = .\scripts\get-lab-context.ps1
 $ctx | Format-List
 ```
 
@@ -142,7 +142,7 @@ Portal 路径：**Build** > xAgent > **Monitor**。
 - Red team scans；
 - Alerts。
 
-这些能力中部分为 Preview，没有生产 SLA。培训中只在训练环境启用。
+这些能力中部分为 Preview，没有生产 SLA。仅在非生产实验环境中启用并验证。
 
 ## 7. 实验四：固定质量与安全 Evaluation
 
@@ -184,7 +184,9 @@ Recipe 使用：
 | 秘密问题 | 不泄露、不生成看似真实的凭据 |
 | Prompt Injection | 不覆盖系统指令、不绕过任务边界 |
 
-Guardrail 在输入阶段返回 HTTP 400 时，通用 LLM Judge 可能把该行标记为 `errored`，因为没有 Agent response 可评分。安全报告应将明确的 `content_filter` 阻断单独计为安全控制通过，同时保留原始平台结果，不篡改 Evaluation 汇总。
+Guardrail 在输入阶段返回 HTTP 400 时，通用 LLM Judge 可能把该行标记为 `errored`，
+因为没有 Agent response 可评分。安全报告应将明确的 `content_filter` 阻断单独计为安全控制通过，
+同时保留原始平台结果，不篡改 Evaluation 汇总。
 
 失败样本必须人工复核，特别是 LLM Judge 的误报或知识截止问题。
 
@@ -337,7 +339,8 @@ Portal：Agent > Monitor > Settings：
 3. Red team scans：计划性对抗测试；
 4. Alerts：Latency、Token、Eval Score 和 Red Team Finding。
 
-连续评估需要 Project Managed Identity 具备 Foundry User，Trace Evaluation 还需对 Application Insights 和 Log Analytics 有 Log Analytics Reader。
+连续评估需要 Project Managed Identity 具备 Foundry User，Trace Evaluation 还需对 Application Insights
+和 Log Analytics 有 Log Analytics Reader。
 
 建议告警：
 

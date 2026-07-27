@@ -1,6 +1,6 @@
 name: xagent-quality-security
 agent:
-    name: xagent-foundry-training
+    name: xagent-foundry-lab
     kind: hosted
 dataset:
     local_uri: tests/queries.jsonl

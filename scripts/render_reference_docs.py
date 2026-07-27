@@ -200,14 +200,14 @@ def render(source: Path, output: Path) -> None:
         topMargin=top,
         bottomMargin=bottom,
         title=source.stem,
-        subject="xAgent Microsoft Foundry training material",
+        subject="xAgent Microsoft Foundry reference material",
     )
     document.build(story, onFirstPage=footer, onLaterPages=footer)
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        raise SystemExit("Usage: render_training_docs.py <markdown> [<markdown> ...]")
+        raise SystemExit("Usage: render_reference_docs.py <markdown> [<markdown> ...]")
     for argument in sys.argv[1:]:
         source_path = Path(argument).resolve()
         output_path = source_path.with_suffix(".pdf")

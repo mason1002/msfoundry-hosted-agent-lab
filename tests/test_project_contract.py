@@ -10,21 +10,21 @@ MAIN = (
 ).read_text(encoding="utf-8")
 GITIGNORE = (ROOT / ".gitignore").read_text(encoding="utf-8")
 README = (ROOT / "README.md").read_text(encoding="utf-8")
-TRAINING_MANUAL = (
-    ROOT / "docs" / "xAgent_Foundry构建部署与测试培训手册_v1.0.md"
+REFERENCE_MANUAL = (
+    ROOT / "docs" / "xAgent_Foundry构建部署与测试参考手册_v1.0.md"
 ).read_text(encoding="utf-8")
 
 
 class ProjectContractTests(unittest.TestCase):
     def test_manifest_uses_xagent_direct_code_responses_hosting(self):
-        self.assertIn("name: xagent-foundry-training", MANIFEST)
+        self.assertIn("name: xagent-foundry-lab", MANIFEST)
         self.assertIn("host: azure.ai.agent", MANIFEST)
         self.assertIn("codeConfiguration:", MANIFEST)
         self.assertIn("entryPoint: main.py", MANIFEST)
         self.assertIn("runtime: python_3_13", MANIFEST)
         self.assertIn("protocol: responses", MANIFEST)
 
-    def test_manifest_declares_supported_training_model(self):
+    def test_manifest_declares_supported_lab_model(self):
         self.assertIn("name: gpt-5.4-mini", MANIFEST)
         self.assertIn('version: "2026-03-17"', MANIFEST)
         self.assertIn("name: GlobalStandard", MANIFEST)
@@ -48,9 +48,9 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("**/.env", GITIGNORE)
         self.assertIn("**/.venv*/", GITIGNORE)
 
-    def test_training_manual_toc_links_have_explicit_anchors(self):
-        links = set(re.findall(r"\]\(#([A-Za-z0-9_-]+)\)", TRAINING_MANUAL))
-        anchors = set(re.findall(r'<a id="([A-Za-z0-9_-]+)"></a>', TRAINING_MANUAL))
+    def test_reference_manual_toc_links_have_explicit_anchors(self):
+        links = set(re.findall(r"\]\(#([A-Za-z0-9_-]+)\)", REFERENCE_MANUAL))
+        anchors = set(re.findall(r'<a id="([A-Za-z0-9_-]+)"></a>', REFERENCE_MANUAL))
         self.assertGreaterEqual(len(links), 12)
         self.assertEqual(set(), links - anchors)
 

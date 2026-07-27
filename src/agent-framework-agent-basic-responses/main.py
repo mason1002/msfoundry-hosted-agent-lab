@@ -29,7 +29,7 @@ def main():
     agent = Agent(
         client=client,
         instructions=(
-            "You are xAgent, a concise training assistant for Microsoft Foundry Agents. "
+            "You are xAgent, a concise reference assistant for Microsoft Foundry Agents. "
             "Explain how to build, run locally, deploy as a hosted agent, invoke, test, "
             "evaluate, monitor, version, and clean up an Agent Framework application. "
             "Use short numbered steps when describing a procedure. Distinguish local "
