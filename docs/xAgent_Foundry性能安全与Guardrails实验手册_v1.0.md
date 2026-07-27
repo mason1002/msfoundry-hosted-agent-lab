@@ -1,4 +1,4 @@
-# xAgent Foundry 性能、安全与 Guardrails 实验手册
+# Foundry Hosted Agent 性能、安全与 Guardrails 实验手册
 
 版本：v1.0
 
@@ -11,7 +11,7 @@
 
 ## 1. 实验目标
 
-本实验在非生产 xAgent 环境验证：
+本实验在非生产 Hosted Agent 环境验证：
 
 1. MAF Agent 的 Hosted Session 日志；
 2. Foundry Server-side Trace 与 Application Insights；
@@ -22,6 +22,9 @@
 7. 身份、RBAC、秘密、Tool 和高影响动作的安全边界。
 
 所有攻击样本必须使用合成数据，不使用真实 Token、个人数据、客户数据或生产 Tool。
+
+本手册假设已有 MAF Agent 已在本地完成业务功能验证，并已通过主参考手册接入 Foundry Hosting。
+实验重点是 Hosted Agent 上线后的微软平台能力，不重复 Agent、Tool、Workflow 或 Prompt 的开发步骤。
 
 本手册不要求一次完成。可根据角色选择：
 
@@ -100,7 +103,7 @@ azd ai agent monitor --session-id <session-id> --type system
 ### 准备
 
 1. 登录 [Microsoft Foundry](https://ai.azure.com)；
-2. 打开 xAgent Project；
+2. 打开目标 Hosted Agent 所在的 Foundry Project；
 3. **Agents** > **Traces**；
 4. 确认已连接 `$ctx.ApplicationInsightsName` 对应的资源；
 5. 若没有数据，产生一条新 Agent 请求并等待数分钟。
@@ -125,7 +128,7 @@ azd ai agent monitor --session-id <session-id> --type system
 
 ## 6. 实验三：Monitor Dashboard
 
-Portal 路径：**Build** > xAgent > **Monitor**。
+Portal 路径：**Build** > 目标 Hosted Agent > **Monitor**。
 
 设置时间范围后记录：
 
@@ -202,7 +205,7 @@ Guardrail 在输入阶段返回 HTTP 400 时，通用 LLM Judge 可能把该行�
 6. 按业务选择 PII、Protected Material、Task Adherence；
 7. 对 User input、Tool call、Tool response、Output 选择适用 intervention point；
 8. Action 选择 Annotate and block；
-9. Assign 给非生产 xAgent；
+9. Assign 给非生产目标 Hosted Agent；
 10. Review 并创建。
 
 注意：Agent Guardrail 当前为 Preview。Spotlighting、Groundedness 等部分模型能力不适用于 Agent。

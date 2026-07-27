@@ -1,12 +1,18 @@
 # Microsoft Foundry Hosted Agent Lab
 
-本仓库提供一个可运行的 xAgent 参考实现，展示如何使用 Microsoft Agent Framework、Microsoft Foundry 和 Azure Developer CLI 完成 Agent 的构建、本地测试、托管部署、远程调用与评估。
+使用前提：**已有可运行并完成本地验证的 Microsoft Agent Framework（MAF）Agent**。
+xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `ResponsesHostServer` 适配器实现 Responses 协议、
+托管到 Microsoft Foundry Agent Service，
+并使用 Foundry Evaluation、Trace、Monitor、Guardrails 和 Azure Monitor 完成部署后验证。
+
+本仓库不要求把现有 Agent 重写成 xAgent。接入时保留已有 Agent、Tool、Workflow 和业务指令，
+只复用本仓库中的 Hosting 入口、`azure.yaml`、部署脚本、评估样例和可观测性配置。
 
 ## 文档导航
 
 | 文档 | Markdown | PDF |
 | --- | --- | --- |
-| Foundry 构建、托管部署与测试参考手册 | [在线阅读](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.pdf) |
+| Microsoft Foundry Agent 托管部署与测试参考手册 | [在线阅读](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.pdf) |
 | 性能、安全、遥测与 Guardrails 实验手册 | [在线阅读](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
 
 ### 按任务快速跳转
@@ -14,7 +20,9 @@
 | 我想做什么 | 直接进入主手册 |
 | --- | --- |
 | 了解架构与组件职责 | [总体架构](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#architecture) |
-| 本地运行与 Prompt 调试 | [本地运行与调试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#local-debug) |
+| 为已有 MAF Agent 选择并实现托管协议 | [Hosting 接入检查](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#hosting-adaptation) |
+| 创建 Foundry Project、模型和资源组 | [创建 Foundry 资源](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#foundry-provision) |
+| 部署前验证 Hosting 兼容性 | [本地 Hosting 验证](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#local-debug) |
 | 部署并调用 Hosted Agent | [托管部署](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#hosted-deployment) |
 | 执行 Agent Prompt Smoke Test | [Prompt 测试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#prompt-testing) |
 | 执行批量质量与安全评估 | [Evaluation](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#evaluation) |
@@ -24,16 +32,18 @@
 | 配置并验证 Guardrails | [Guardrails](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#guardrails) |
 | 执行性能与负载测试 | [性能测试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#performance-testing) |
 
+具体命令、适用场景和执行顺序请参阅参考手册。
+
 ## 技术路径
 
 ```text
-Agent Framework Python 代码
-  -> ResponsesHostServer
-  -> azd ai agent run
-  -> 本地 Responses endpoint
+已有并通过本地验证的 MAF Agent
+  -> 选择 Responses 或 Invocations 协议
+  -> 本 Lab：ResponsesHostServer Hosting Adapter
+  -> 本地 Hosting 兼容性验证
   -> azd deploy
   -> Microsoft Foundry 托管 Agent
-  -> azd ai agent invoke / 评估
+  -> 远程调用 / Evaluation / Trace / Monitor / Guardrails / 性能测试
 ```
 
 ## 关键文件
@@ -43,19 +53,20 @@ Agent Framework Python 代码
 | `azure.yaml` | Foundry Project、模型和 Hosted Agent 声明 |
 | `src/agent-framework-agent-basic-responses/main.py` | xAgent 入口与系统指令 |
 | `src/agent-framework-agent-basic-responses/requirements.txt` | Python 运行依赖 |
+| `src/agent-framework-agent-basic-responses/devui.py` | 复用同一 xAgent 的本地 MAF DevUI 入口 |
+| `src/agent-framework-agent-basic-responses/requirements-dev.txt` | DevUI 本地开发依赖，不参与托管部署 |
 | `.vscode/tasks.json` | 本地 Agent Server 与 Inspector 任务 |
 | `.vscode/launch.json` | debugpy 调试入口 |
-| `docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md` | 构建、部署、测试与运维参考步骤 |
+| `docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md` | Hosting 接入、部署、测试与运维参考步骤 |
 | `docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md` | 性能、安全、遥测和 Guardrails 实验 |
 | `infra/observability.bicep` | Application Insights 与 Log Analytics |
 | `scripts/get-lab-context.ps1` | 自动发现当前 azd/Azure 环境资源名称 |
 | `scripts/connect-observability.ps1` | 动态连接当前环境的 Application Insights |
 | `scripts/apply-hosted-agent-guardrail.ps1` | Hosted Agent Guardrail REST 回退脚本 |
-| `scripts/requirements-docs.txt` | 生成参考资料 PDF 所需的独立 Python 依赖 |
 | `src/agent-framework-agent-basic-responses/eval-security.yaml` | 可复用的质量与安全评估配置 |
 | `tests/test_project_contract.py` | 不调用 Azure 的项目契约测试 |
 
-## 获取自己的训练环境
+## 获取自己的实验环境
 
 每次 `azd` 初始化和 Provision 都可能生成不同的资源组、Foundry Account 后缀、Project、Agent 与监控资源名称。不要复制文档中的示例资源名。
 
@@ -82,45 +93,6 @@ $ctx | Format-List
 | 防护栏 | `Microsoft.DefaultV2` |
 
 `get-lab-context.ps1` 只读取当前 azd 环境和目标资源组。订阅 ID、资源 ID 和 endpoint 仅用于本地操作，不应粘贴到公开材料。
-
-## 常用命令
-
-所有 `azd` 命令都应在项目根目录执行。
-
-```powershell
-$env:AZURE_DEV_USER_AGENT = 'microsoft_foundry_skill'
-
-azd ai project show --output json
-azd ai agent run --no-client
-azd ai agent invoke --local "请用三步说明 Hosted Agent 的部署流程。"
-$ctx = .\scripts\get-lab-context.ps1
-azd env set AZURE_AI_RAI_POLICY_ID $ctx.RaiPolicyId
-azd deploy --no-prompt
-azd ai agent show --output json
-azd ai agent invoke "请解释本地运行和托管部署的区别。"
-azd ai agent eval run
-```
-
-性能、安全、Portal/CLI 评估、追踪、监控、AI 红队测试与防护栏的完整步骤见两份参考手册。
-
-重新生成 PDF 时，使用独立环境安装文档工具依赖：
-
-```powershell
-python -m venv .venv-docs
-.\.venv-docs\Scripts\python.exe -m pip install -r .\scripts\requirements-docs.txt
-.\.venv-docs\Scripts\python.exe .\scripts\render_reference_docs.py .\docs\xAgent_Foundry构建部署与测试参考手册_v1.0.md .\docs\xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md
-```
-
-Observability 资源也采用动态名称：
-
-```powershell
-$ctx = .\scripts\get-lab-context.ps1
-az deployment group create `
-  --name xagent-observability `
-  --resource-group $ctx.ResourceGroup `
-  --template-file .\infra\observability.bicep
-.\scripts\connect-observability.ps1
-```
 
 ## 本地配置
 

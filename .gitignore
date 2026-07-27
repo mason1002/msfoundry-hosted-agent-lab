@@ -12,3 +12,5 @@ src/*/evaluators/
 src/*/eval.yaml
 docs/xAgent_端到端验证报告_v1.0.md
 docs/xAgent_端到端验证报告_v1.0.pdf
+scripts/render_reference_docs.py
+scripts/requirements-docs.txt
