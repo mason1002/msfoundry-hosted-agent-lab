@@ -1,0 +1,14 @@
+.azure
+.foundry/
+.env
+.venv*/
+**/.env
+**/.venv*/
+**/__pycache__/
+**/*.pyc
+src/*/.agent_configs/
+src/*/datasets/
+src/*/evaluators/
+src/*/eval.yaml
+docs/xAgent_端到端验证报告_v1.0.md
+docs/xAgent_端到端验证报告_v1.0.pdf

@@ -1,0 +1,13 @@
+name: xagent-quality-security
+agent:
+    name: xagent-foundry-training
+    kind: hosted
+dataset:
+    local_uri: tests/queries.jsonl
+evaluators:
+    - builtin.intent_resolution
+    - builtin.task_adherence
+    - builtin.indirect_attack
+options:
+    eval_model: gpt-5.4-mini
+max_samples: 8
