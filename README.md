@@ -24,6 +24,8 @@
 | 配置并验证 Guardrails | [Guardrails](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#guardrails) |
 | 执行性能与负载测试 | [性能测试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#performance-testing) |
 
+具体命令、适用场景和执行顺序请参阅参考手册。
+
 ## 技术路径
 
 ```text
@@ -54,7 +56,7 @@ Agent Framework Python 代码
 | `src/agent-framework-agent-basic-responses/eval-security.yaml` | 可复用的质量与安全评估配置 |
 | `tests/test_project_contract.py` | 不调用 Azure 的项目契约测试 |
 
-## 获取自己的训练环境
+## 获取自己的实验环境
 
 每次 `azd` 初始化和 Provision 都可能生成不同的资源组、Foundry Account 后缀、Project、Agent 与监控资源名称。不要复制文档中的示例资源名。
 
@@ -81,37 +83,6 @@ $ctx | Format-List
 | 防护栏 | `Microsoft.DefaultV2` |
 
 `get-lab-context.ps1` 只读取当前 azd 环境和目标资源组。订阅 ID、资源 ID 和 endpoint 仅用于本地操作，不应粘贴到公开材料。
-
-## 常用命令
-
-所有 `azd` 命令都应在项目根目录执行。
-
-```powershell
-$env:AZURE_DEV_USER_AGENT = 'microsoft_foundry_skill'
-
-azd ai project show --output json
-azd ai agent run --no-client
-azd ai agent invoke --local "请用三步说明 Hosted Agent 的部署流程。"
-$ctx = .\scripts\get-lab-context.ps1
-azd env set AZURE_AI_RAI_POLICY_ID $ctx.RaiPolicyId
-azd deploy --no-prompt
-azd ai agent show --output json
-azd ai agent invoke "请解释本地运行和托管部署的区别。"
-azd ai agent eval run
-```
-
-性能、安全、Portal/CLI 评估、追踪、监控、AI 红队测试与防护栏的完整步骤见两份参考手册。
-
-Observability 资源也采用动态名称：
-
-```powershell
-$ctx = .\scripts\get-lab-context.ps1
-az deployment group create `
-  --name xagent-observability `
-  --resource-group $ctx.ResourceGroup `
-  --template-file .\infra\observability.bicep
-.\scripts\connect-observability.ps1
-```
 
 ## 本地配置
 
