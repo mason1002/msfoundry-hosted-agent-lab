@@ -6,3 +6,5 @@ tests/
 eval*.yaml
 Dockerfile
 .dockerignore
+devui.py
+requirements-dev.txt

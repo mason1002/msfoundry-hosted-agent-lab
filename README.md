@@ -1,12 +1,18 @@
 # Microsoft Foundry Hosted Agent Lab
 
-本仓库提供一个可运行的 xAgent 参考实现，展示如何使用 Microsoft Agent Framework、Microsoft Foundry 和 Azure Developer CLI 完成 Agent 的构建、本地测试、托管部署、远程调用与评估。
+使用前提：**已有可运行并完成本地验证的 Microsoft Agent Framework（MAF）Agent**。
+xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `ResponsesHostServer` 适配器实现 Responses 协议、
+托管到 Microsoft Foundry Agent Service，
+并使用 Foundry Evaluation、Trace、Monitor、Guardrails 和 Azure Monitor 完成部署后验证。
+
+本仓库不要求把现有 Agent 重写成 xAgent。接入时保留已有 Agent、Tool、Workflow 和业务指令，
+只复用本仓库中的 Hosting 入口、`azure.yaml`、部署脚本、评估样例和可观测性配置。
 
 ## 文档导航
 
 | 文档 | Markdown | PDF |
 | --- | --- | --- |
-| Foundry 构建、托管部署与测试参考手册 | [在线阅读](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.pdf) |
+| Microsoft Foundry Agent 托管部署与测试参考手册 | [在线阅读](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.pdf) |
 | 性能、安全、遥测与 Guardrails 实验手册 | [在线阅读](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
 
 ### 按任务快速跳转
@@ -14,8 +20,9 @@
 | 我想做什么 | 直接进入主手册 |
 | --- | --- |
 | 了解架构与组件职责 | [总体架构](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#architecture) |
+| 为已有 MAF Agent 选择并实现托管协议 | [Hosting 接入检查](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#hosting-adaptation) |
 | 创建 Foundry Project、模型和资源组 | [创建 Foundry 资源](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#foundry-provision) |
-| 本地运行与 Prompt 调试 | [本地运行与调试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#local-debug) |
+| 部署前验证 Hosting 兼容性 | [本地 Hosting 验证](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#local-debug) |
 | 部署并调用 Hosted Agent | [托管部署](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#hosted-deployment) |
 | 执行 Agent Prompt Smoke Test | [Prompt 测试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#prompt-testing) |
 | 执行批量质量与安全评估 | [Evaluation](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#evaluation) |
@@ -30,13 +37,13 @@
 ## 技术路径
 
 ```text
-Agent Framework Python 代码
-  -> ResponsesHostServer
-  -> azd ai agent run
-  -> 本地 Responses endpoint
+已有并通过本地验证的 MAF Agent
+  -> 选择 Responses 或 Invocations 协议
+  -> 本 Lab：ResponsesHostServer Hosting Adapter
+  -> 本地 Hosting 兼容性验证
   -> azd deploy
   -> Microsoft Foundry 托管 Agent
-  -> azd ai agent invoke / 评估
+  -> 远程调用 / Evaluation / Trace / Monitor / Guardrails / 性能测试
 ```
 
 ## 关键文件
@@ -46,9 +53,11 @@ Agent Framework Python 代码
 | `azure.yaml` | Foundry Project、模型和 Hosted Agent 声明 |
 | `src/agent-framework-agent-basic-responses/main.py` | xAgent 入口与系统指令 |
 | `src/agent-framework-agent-basic-responses/requirements.txt` | Python 运行依赖 |
+| `src/agent-framework-agent-basic-responses/devui.py` | 复用同一 xAgent 的本地 MAF DevUI 入口 |
+| `src/agent-framework-agent-basic-responses/requirements-dev.txt` | DevUI 本地开发依赖，不参与托管部署 |
 | `.vscode/tasks.json` | 本地 Agent Server 与 Inspector 任务 |
 | `.vscode/launch.json` | debugpy 调试入口 |
-| `docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md` | 构建、部署、测试与运维参考步骤 |
+| `docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md` | Hosting 接入、部署、测试与运维参考步骤 |
 | `docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md` | 性能、安全、遥测和 Guardrails 实验 |
 | `infra/observability.bicep` | Application Insights 与 Log Analytics |
 | `scripts/get-lab-context.ps1` | 自动发现当前 azd/Azure 环境资源名称 |

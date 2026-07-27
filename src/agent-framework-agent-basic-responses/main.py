@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def main():
+def create_agent() -> Agent:
     model_name = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME") or os.getenv("FOUNDRY_MODEL_NAME")
     if not model_name:
         raise RuntimeError(
@@ -26,8 +26,9 @@ def main():
         credential=DefaultAzureCredential(),
     )
 
-    agent = Agent(
+    return Agent(
         client=client,
+        name="xAgent",
         instructions=(
             "You are xAgent, a concise reference assistant for Microsoft Foundry Agents. "
             "Explain how to build, run locally, deploy as a hosted agent, invoke, test, "
@@ -42,7 +43,9 @@ def main():
         default_options={"store": False},
     )
 
-    server = ResponsesHostServer(agent)
+
+def main():
+    server = ResponsesHostServer(create_agent())
     server.run()
 
 

@@ -8,6 +8,9 @@ MANIFEST = (ROOT / "azure.yaml").read_text(encoding="utf-8")
 MAIN = (
     ROOT / "src" / "agent-framework-agent-basic-responses" / "main.py"
 ).read_text(encoding="utf-8")
+DEVUI = (
+    ROOT / "src" / "agent-framework-agent-basic-responses" / "devui.py"
+).read_text(encoding="utf-8")
 GITIGNORE = (ROOT / ".gitignore").read_text(encoding="utf-8")
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 REFERENCE_MANUAL = (
@@ -36,6 +39,7 @@ class ProjectContractTests(unittest.TestCase):
         self.assertNotIn("/subscriptions/", MANIFEST)
 
     def test_agent_uses_identity_and_environment_configuration(self):
+        self.assertIn("def create_agent() -> Agent:", MAIN)
         self.assertIn("DefaultAzureCredential()", MAIN)
         self.assertIn('os.environ["FOUNDRY_PROJECT_ENDPOINT"]', MAIN)
         self.assertIn('os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME")', MAIN)
@@ -43,6 +47,19 @@ class ProjectContractTests(unittest.TestCase):
             MAIN,
             re.compile(r"(?i)(api[_-]?key|access[_-]?token)\s*=\s*['\"]\S+"),
         )
+
+    def test_devui_reuses_the_hosted_agent_factory(self):
+        self.assertIn("from main import create_agent", DEVUI)
+        self.assertIn("serve(", DEVUI)
+        self.assertIn("entities=[create_agent()]", DEVUI)
+        self.assertIn('host="127.0.0.1"', DEVUI)
+        self.assertIn("auth_enabled=False", DEVUI)
+
+        service_root = ROOT / "src" / "agent-framework-agent-basic-responses"
+        for ignore_file in (".azdignore", ".agentignore"):
+            ignore_rules = (service_root / ignore_file).read_text(encoding="utf-8")
+            self.assertIn("devui.py", ignore_rules)
+            self.assertIn("requirements-dev.txt", ignore_rules)
 
     def test_local_secrets_and_virtual_environments_are_ignored(self):
         self.assertIn("**/.env", GITIGNORE)
@@ -64,6 +81,18 @@ class ProjectContractTests(unittest.TestCase):
             if anchor:
                 target_text = target_path.read_text(encoding="utf-8")
                 self.assertIn(f'<a id="{anchor}"></a>', target_text)
+
+    def test_docs_assume_an_existing_local_maf_agent(self):
+        self.assertIn("已有可运行并完成本地验证", README)
+        self.assertIn("不要求把现有 Agent 重写成 xAgent", README)
+        self.assertIn("### 2.1 接入前提", REFERENCE_MANUAL)
+        self.assertIn("ResponsesHostServer(agent)", REFERENCE_MANUAL)
+        self.assertIn("自定义业务 Golden Dataset", REFERENCE_MANUAL)
+
+    def test_docs_do_not_require_responses_host_server_for_all_hosted_agents(self):
+        self.assertIn("不是 Foundry 的唯一实现", REFERENCE_MANUAL)
+        self.assertIn("Responses + Invocations", REFERENCE_MANUAL)
+        self.assertIn("代码实现必须与 `azure.yaml` 声明的协议和版本一致", REFERENCE_MANUAL)
 
 
 if __name__ == "__main__":
