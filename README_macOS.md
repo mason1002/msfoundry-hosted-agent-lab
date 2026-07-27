@@ -53,7 +53,6 @@ Agent Framework Python 代码
 | `docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md` | 构建、部署、测试与运维参考步骤 |
 | `docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md` | 性能、安全、遥测和 Guardrails 实验 |
 | `infra/observability.bicep` | Application Insights 与 Log Analytics |
-| `scripts/requirements-docs.txt` | 生成参考资料 PDF 所需的独立 Python 依赖 |
 | `src/agent-framework-agent-basic-responses/eval-security.yaml` | 可复用的质量与安全评估配置 |
 | `tests/test_project_contract.py` | 不调用 Azure 的项目契约测试 |
 
@@ -224,7 +223,7 @@ export FOUNDRY_PROJECT_ENDPOINT="$(azd env get-value FOUNDRY_PROJECT_ENDPOINT)"
 export AZURE_AI_MODEL_DEPLOYMENT_NAME="$(
   azd env get-value AI_PROJECT_DEPLOYMENTS |
     src/agent-framework-agent-basic-responses/.venv/bin/python -c \
-      'import json, sys; raw = sys.stdin.read().strip(); data = json.loads(json.loads(chr(34) + raw + chr(34))); print(data[0]["name"])'
+      'import json, sys; raw = sys.stdin.read().strip(); data = json.loads(raw); data = json.loads(data) if isinstance(data, str) else data; print(data[0]["name"])'
 )"
 : "${FOUNDRY_PROJECT_ENDPOINT:?请先完成 azd provision}"
 : "${AZURE_AI_MODEL_DEPLOYMENT_NAME:?当前 azd 环境没有模型部署}"
@@ -255,7 +254,7 @@ VS Code 调试时选择 `src/agent-framework-agent-basic-responses/.venv/bin/pyt
 model_deployment_name="$(
   azd env get-value AI_PROJECT_DEPLOYMENTS |
     python3 -c \
-      'import json, sys; raw = sys.stdin.read().strip(); data = json.loads(json.loads(chr(34) + raw + chr(34))); print(data[0]["name"])'
+      'import json, sys; raw = sys.stdin.read().strip(); data = json.loads(raw); data = json.loads(data) if isinstance(data, str) else data; print(data[0]["name"])'
 )"
 project_id="$(azd env get-value AZURE_AI_PROJECT_ID)"
 rai_policy_id="${project_id%/projects/*}/raiPolicies/Microsoft.DefaultV2"
@@ -355,16 +354,6 @@ az rest \
   --output none
 ```
 
-### 生成参考手册 PDF
-
-```bash
-python3 -m venv .venv-docs
-./.venv-docs/bin/python -m pip install -r scripts/requirements-docs.txt
-./.venv-docs/bin/python scripts/render_reference_docs.py \
-  docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md \
-  docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md
-```
-
 ### 清理 macOS 实验环境
 
 `azd down --purge` 会永久删除当前 environment 的 Resource Group、Foundry Project、模型部署、
@@ -444,16 +433,6 @@ azd ai agent eval run \
 
 性能、安全、Portal/CLI 评估、追踪、监控、AI 红队测试与防护栏的完整步骤见两份参考手册。
 
-重新生成 PDF 时，使用独立环境安装文档工具依赖：
-
-```bash
-python3 -m venv .venv-docs
-./.venv-docs/bin/python -m pip install -r ./scripts/requirements-docs.txt
-./.venv-docs/bin/python ./scripts/render_reference_docs.py \
-  ./docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md \
-  ./docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md
-```
-
 Observability 资源也采用动态名称：
 
 ```bash
@@ -477,6 +456,11 @@ Windows 深层工作区可能触发 Python 长路径问题。建议将代码放�
 ```bash
 azd env list
 azd env get-value AZURE_RESOURCE_GROUP
+```
+
+确认 environment 和 Resource Group 无误后，再单独执行删除：
+
+```bash
 azd down --purge
 ```
 

@@ -116,6 +116,8 @@ class ProjectContractTests(unittest.TestCase):
         self.assertNotIn("pwsh", MACOS_README)
         self.assertNotIn("powershell", MACOS_README.lower())
         self.assertNotIn(".ps1", MACOS_README.lower())
+        self.assertNotIn("render_reference_docs.py", MACOS_README)
+        self.assertIn("isinstance(data, str)", macos_section)
         self.assertIn(
             ': "${AZURE_AI_MODEL_DEPLOYMENT_NAME:?当前 azd 环境没有模型部署}"',
             macos_section,
