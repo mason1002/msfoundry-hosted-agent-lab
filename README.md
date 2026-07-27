@@ -15,9 +15,11 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
 | Microsoft Foundry Agent 托管部署与测试参考手册 | [在线阅读](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.pdf) |
 | 性能、安全、遥测与 Guardrails 实验手册 | [在线阅读](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
 
+两份手册均按单项任务编排。直接进入目标章节，按该节列出的前提、命令、样例和通过标准执行，无需先完成其他测试。
+
 ### 按任务快速跳转
 
-| 我想做什么 | 直接进入主手册 |
+| 任务 | 直接进入主手册 |
 | --- | --- |
 | 了解架构与组件职责 | [总体架构](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#architecture) |
 | 为已有 MAF Agent 选择并实现托管协议 | [Hosting 接入检查](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#hosting-adaptation) |
@@ -31,6 +33,7 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
 | 查看 Monitor 指标与告警 | [Agent Monitoring Dashboard](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#agent-monitoring) |
 | 配置并验证 Guardrails | [Guardrails](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#guardrails) |
 | 执行性能与负载测试 | [性能测试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#performance-testing) |
+| 查看真实测试截图 | [测试证据](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#test-evidence) |
 
 具体命令、适用场景和执行顺序请参阅参考手册。
 
@@ -59,6 +62,7 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
 | `.vscode/launch.json` | debugpy 调试入口 |
 | `docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md` | Hosting 接入、部署、测试与运维参考步骤 |
 | `docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md` | 性能、安全、遥测和 Guardrails 实验 |
+| `docs/images/` | 已脱敏的真实 DevUI 对话与 OTel Trace 截图 |
 | `infra/observability.bicep` | Application Insights 与 Log Analytics |
 | `scripts/get-lab-context.ps1` | 自动发现当前 azd/Azure 环境资源名称 |
 | `scripts/connect-observability.ps1` | 动态连接当前环境的 Application Insights |
@@ -141,6 +145,15 @@ uv pip install --python .venv-local/bin/python --prerelease allow -r requirement
 ```
 
 完整命令、成本控制和验证顺序见两份参考手册。
+
+## 真实测试截图
+
+以下截图来自同一 xAgent 的本地 MAF DevUI 实际调用。只保留合成问题、Events、Trace、耗时和 Token，
+不包含订阅、租户、资源 ID、凭据或连接字符串。
+
+| 对话与 Events | OTel Traces |
+| --- | --- |
+| [查看截图](docs/images/devui-chat.png) | [查看截图](docs/images/devui-traces.png) |
 
 ## 本地配置
 

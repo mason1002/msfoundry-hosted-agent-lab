@@ -16,6 +16,9 @@ README = (ROOT / "README.md").read_text(encoding="utf-8")
 REFERENCE_MANUAL = (
     ROOT / "docs" / "xAgent_Foundry构建部署与测试参考手册_v1.0.md"
 ).read_text(encoding="utf-8")
+LAB_MANUAL = (
+    ROOT / "docs" / "xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md"
+).read_text(encoding="utf-8")
 
 
 class ProjectContractTests(unittest.TestCase):
@@ -71,6 +74,34 @@ class ProjectContractTests(unittest.TestCase):
         anchors = set(re.findall(r'<a id="([A-Za-z0-9_-]+)"></a>', REFERENCE_MANUAL))
         self.assertGreaterEqual(len(links), 12)
         self.assertEqual(set(), links - anchors)
+
+    def test_lab_manual_methods_are_independent_and_linked(self):
+        links = set(re.findall(r"\]\(#([A-Za-z0-9_-]+)\)", LAB_MANUAL))
+        anchors = set(re.findall(r'<a id="([A-Za-z0-9_-]+)"></a>', LAB_MANUAL))
+        self.assertGreaterEqual(len(links), 11)
+        self.assertEqual(set(), links - anchors)
+        self.assertGreaterEqual(LAB_MANUAL.count("| 独立前提 |"), 11)
+        self.assertGreaterEqual(LAB_MANUAL.count("| 通过标准 |"), 11)
+
+    def test_documentation_evidence_images_exist_and_are_linked(self):
+        for filename in ("devui-chat.png", "devui-traces.png"):
+            image = ROOT / "docs" / "images" / filename
+            self.assertTrue(image.is_file(), filename)
+            self.assertGreater(image.stat().st_size, 10_000, filename)
+            self.assertIn(f"images/{filename}", REFERENCE_MANUAL)
+            self.assertIn(f"docs/images/{filename}", README)
+
+    def test_all_local_markdown_links_resolve(self):
+        for markdown_path in (ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md"))):
+            if "端到端验证报告" in markdown_path.name:
+                continue
+            text = markdown_path.read_text(encoding="utf-8")
+            for target in re.findall(r"!?\[[^]]*\]\(([^)]+)\)", text):
+                if target.startswith(("http://", "https://", "#")):
+                    continue
+                relative_target = target.split("#", 1)[0]
+                resolved = (markdown_path.parent / relative_target).resolve()
+                self.assertTrue(resolved.is_file(), f"{markdown_path.name}: {target}")
 
     def test_readme_document_navigation_targets_exist(self):
         links = re.findall(r"\]\((docs/[^)]+)\)", README)

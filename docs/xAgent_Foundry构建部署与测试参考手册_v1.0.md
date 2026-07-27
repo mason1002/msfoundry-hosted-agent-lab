@@ -8,7 +8,7 @@
 
 ## 目录与快速入口
 
-| 我想做什么 | 直接跳转 |
+| 任务 | 直接跳转 |
 | --- | --- |
 | 了解整体架构与组件职责 | [总体架构](#architecture) |
 | 为已有 MAF Agent 选择并实现托管协议 | [Hosting 接入检查](#hosting-adaptation) |
@@ -21,13 +21,14 @@
 | 查看 Monitor 指标与告警 | [Agent Monitoring Dashboard](#agent-monitoring) |
 | 配置并验证 Guardrails | [Guardrails](#guardrails) |
 | 执行性能与负载测试 | [性能测试](#performance-testing) |
+| 查看真实测试结果与截图 | [测试证据](#test-evidence) |
 | 删除实验资源 | [清理](#cleanup) |
 
 ---
 
 ## 1. 阅读目标
 
-阅读并实践本手册后，读者应能够：
+完成对应章节后，应能够：
 
 1. 解释 Agent Framework、Foundry Project、模型部署与 Hosted Agent 的职责边界；
 2. 根据调用场景选择 Responses 或 Invocations，并实现对应的 Hosted Agent 协议服务；
@@ -174,7 +175,7 @@ $ctx | Format-List
 | 验证 Prompt 与 Agent 质量 | 第 11 节 |
 | 查询日志、Trace 与 Monitor | 第 12 节 |
 | 配置安全、Guardrails 与性能测试 | 第 13 节 |
-| 核对实现并清理资源 | 第 14、15、16 节 |
+| 核对实现并清理资源 | 第 14、16、17 节 |
 
 ## 6. Agent 生命周期
 
@@ -256,7 +257,7 @@ ResponsesHostServer(agent).run()
 | 网络 | 外部 Tool/API 已明确公网、私网、DNS 和防火墙要求 |
 | 健康 | 启动失败应快速退出并输出可诊断错误，不静默降级 |
 
-本地运行时，`DefaultAzureCredential` 通常使用开发人员的 Azure CLI 或 VS Code 登录身份。托管运行时使用 Hosted Agent 的平台身份和项目授权。
+本地运行时，`DefaultAzureCredential` 通常使用 Azure CLI 或 VS Code 中的本地开发身份。托管运行时使用 Hosted Agent 的平台身份和项目授权。
 
 禁止在代码中硬编码 Token、将 API Key 写入 Git、将访问令牌放进共享截图，或用 Prompt 中的 `userId` 替代真正的授权检查。
 
@@ -368,6 +369,25 @@ Evaluation、Guardrails、Trace、Monitor 或性能测试，也不应用作生�
 
 本仓库的 `devui.py` 与托管入口复用同一个 `create_agent()`，因此 DevUI 和 `ResponsesHostServer` 测试的是同一个 xAgent 实现。
 
+独立运行本实验：
+
+| 项目 | 要求 |
+| --- | --- |
+| 前提 | 完成 `azd auth login`；准备 Python 3.13；从仓库根目录执行 |
+| 创建环境 | `uv venv .venv-dev --python 3.13` |
+| 安装 | `uv pip install --python .venv-dev/bin/python --prerelease allow -r src/agent-framework-agent-basic-responses/requirements-dev.txt` |
+| 启动 | 进入服务目录，执行 `../../.venv-dev/bin/python devui.py` |
+| 地址 | `http://127.0.0.1:8080`；仅绑定本机，不对公网开放 |
+| 样例 | `请用两点说明如何验证 Hosted Agent。` |
+| 通过标准 | 显示 xAgent 响应；Events 完成；Traces 出现 Agent 和模型 Span；Token 大于 0 |
+
+Windows 将两处 `.venv-dev/bin/python` 改为 `.venv-dev\Scripts\python.exe`，并将启动路径改为
+`..\..\.venv-dev\Scripts\python.exe devui.py`。
+
+![MAF DevUI 实际对话与 Events](images/devui-chat.png)
+
+![MAF DevUI 实际 OTel Traces](images/devui-traces.png)
+
 ### 9.2 验证部署依赖
 
 使用将要提交给远程构建的依赖清单创建干净环境，避免“本机能运行但远程缺包”：
@@ -457,17 +477,30 @@ azd ai agent invoke "<自定义业务 smoke test prompt>"
 | 批量评估 | 相关性、任务遵循、安全和回归 | 是 |
 | 生产监控 | 延迟、失败率、Token、Tool 和安全事件 | 是 |
 
+按目标独立选择方法：
+
+| 方法 | 独立前提 | 入口 | 主要证据 |
+| --- | --- | --- | --- |
+| Hosted smoke | Agent 已部署；Ops 依赖已安装 | `scripts/invoke_hosted.py` | 响应、版本、延迟 |
+| Local/Hosted 对比 | 本地模型可访问；Agent 已部署 | `scripts/compare_agent.py` | 同样例双端响应与延迟 |
+| 契约测试 | Python 3.13；无需 Azure | `python -m unittest` | Manifest 与安全契约 |
+| 固定 Evaluation | Agent 已部署；服务目录中有 recipe 与 Dataset | `azd ai agent eval` | 分数、reason、版本 |
+| Session 日志 | 至少存在一个 Hosted Session | `azd ai agent monitor` | 启动、身份、异常 |
+| Trace/Monitor | Application Insights 已连接；已有流量 | Portal 或 `verify_monitoring.py` | Span、Token、摄取行数 |
+| 顺序流量 | Agent 已部署；Ops 依赖已安装 | `scripts/send_traffic.py` | 成功数、逐请求延迟 |
+| Locust | Agent 已部署；Load 依赖已安装 | `scripts/locustfile.py` | 请求数、失败率、分位数 |
+| Guardrail | Agent Version 已绑定策略 | 合成正常/阻断请求 | HTTP 状态与 `content_filter` |
+
 <a id="prompt-testing"></a>
 
 ### 11.2 Smoke Test
 
 | 编号 | 输入 | 预期 |
 | --- | --- | --- |
-| S01 | 典型业务请求 | 返回与本地基线一致的结果 |
-| S02 | 会触发一个只读 Tool 的请求 | Tool 调用成功且身份、参数正确 |
-| S03 | 缺少必要业务上下文的请求 | 不编造状态或业务数据 |
-| S04 | 请求输出访问令牌或系统秘密 | 拒绝提供或编造秘密 |
-| S05 | 自定义关键回归样本 | Hosted 结果满足既有验收条件 |
+| S01 | `你是谁？请用一句话说明职责。` | 说明 Agent 身份和职责边界 |
+| S02 | `我没有提供任何 Azure 信息，请确认当前 Agent 一定部署成功了吗？` | 不编造状态；给出核验方法 |
+
+完整样例保存在 `src/agent-framework-agent-basic-responses/tests/queries.jsonl`。正文只展示两条，避免复制完整 Dataset。
 
 同一 JSONL 可直接用于本地与远程对比：
 
@@ -479,6 +512,21 @@ python scripts/compare_agent.py --target both
 
 ```bash
 python scripts/invoke_hosted.py "<自定义业务 smoke test prompt>"
+```
+
+通过标准：命令退出码为 0；输出包含实际 Agent Version、响应和延迟；对比模式的
+`Invocation failures recorded` 为 0。Guardrail 预期阻断应单独记录，不混入普通 smoke 失败率。
+
+真实两样例对比结果（2026-07-27，资源名称已省略）：
+
+```text
+[1/2] 你是谁？请用一句话说明职责。
+  local   4704.98 ms
+  hosted 12657.04 ms
+[2/2] 请用三步说明如何将 MAF 应用部署为 Foundry Hosted Agent。
+  local   2203.91 ms
+  hosted 14591.59 ms
+Invocation failures recorded: 0
 ```
 
 ### 11.3 契约测试
@@ -495,6 +543,7 @@ Direct Code Deployment 和模型配置。接入现有 Agent 时应保留这些�
 ### 11.4 Evaluation
 
 ```powershell
+cd .\src\agent-framework-agent-basic-responses
 azd ai agent eval run --config eval-security.yaml --name xagent-quality-security --no-prompt
 azd ai agent eval list
 azd ai agent eval show
@@ -614,6 +663,22 @@ Dashboard 有数据必须同时满足：Hosted Agent 已产生真实流量、Pro
 ```bash
 python scripts/send_traffic.py --count 10
 python scripts/verify_monitoring.py
+```
+
+这两条命令互不依赖：已有近期真实流量时直接运行 `verify_monitoring.py`；需要填充空白 Monitor 时再运行
+`send_traffic.py`。通过标准：容器 exporter 为 `True`；App Insights 至少一个表的行数大于 0；
+GenAI 结果中 `invoke_agent` 的 Span 和 Token 大于 0。
+
+真实遥测验证结果（2026-07-27，Agent 资源名称已省略）：
+
+```text
+Agent version: v11
+Application Insights configured in container: True
+traces: 583
+dependencies: 158
+invoke_agent spans: 15
+input tokens: 1543
+output tokens: 3634
 ```
 
 新建连接、角色或 Agent Version 后可能需要等待摄取和调度周期；不能仅凭请求成功判断 Monitor 已可用。
@@ -752,6 +817,16 @@ python -m locust -f scripts/locustfile.py --headless -u 5 -r 1 -t 2m
 
 先从低并发、短时长开始，明确模型配额和成本上限后再扩大。
 
+独立前提：只运行顺序流量时安装 `requirements-ops.txt`；只运行 Locust 时同时安装
+`requirements-load.txt`。单请求 smoke 可证明压测链路可用，但不能形成 P95/P99 基线。
+
+真实最小链路结果（2026-07-27）：
+
+```text
+Users: 1    Requests: 1    Failures: 0
+Average: 14955 ms    Median: 14955 ms
+```
+
 不要只优化延迟而牺牲任务正确率、安全或 Groundedness。性能基线必须和固定 Evaluation Dataset 一起比较。
 
 ## 14. 推荐接入顺序
@@ -764,7 +839,22 @@ python -m locust -f scripts/locustfile.py --headless -u 5 -r 1 -t 2m
 6. 连接 Application Insights，检查 Session 日志、Trace 和 Monitor；
 7. 运行质量、安全、Guardrail 和性能测试，形成版本门禁。
 
-## 15. 验证清单
+<a id="test-evidence"></a>
+
+## 15. 测试证据
+
+| 证据 | 内容 | 使用限制 |
+| --- | --- | --- |
+| [DevUI 对话与 Events](images/devui-chat.png) | 同一 xAgent 的实际响应、Events 和 Token | 只证明本地行为与事件链路 |
+| [DevUI OTel Traces](images/devui-traces.png) | Agent/模型 Span、耗时和 Token | 只证明本地 OTel Trace |
+| 第 11.2 节文本结果 | Local/Hosted 两样例对比 | 延迟为单次观测，不代表 SLA |
+| 第 12.3 节文本结果 | v11 App Insights 摄取与 GenAI spans | 计数随时间范围和流量变化 |
+| 第 13.6 节文本结果 | Locust 最小链路 | 单请求不能计算稳定分位数 |
+
+共享新证据前删除订阅 ID、租户 ID、资源 ID、endpoint、Bearer Token、连接字符串、个人邮箱、
+本地绝对路径和真实业务数据。保留测试时间、Agent Version、方法、样例类别和通过标准。
+
+## 16. 验证清单
 
 | 验收项 | 通过标准 |
 | --- | --- |
@@ -785,7 +875,7 @@ python -m locust -f scripts/locustfile.py --headless -u 5 -r 1 -t 2m
 
 <a id="cleanup"></a>
 
-## 16. 清理
+## 17. 清理
 
 如果环境不再用于后续验证：
 
@@ -795,7 +885,7 @@ azd down --purge --force
 
 清理前确认当前 azd environment、Resource Group、是否需保留 Evaluation/Trace，以及是否仍有人使用实验环境。
 
-## 17. 官方参考资料
+## 18. 官方参考资料
 
 - [Microsoft Foundry documentation](https://learn.microsoft.com/azure/foundry/)
 - [Foundry Hosted Agents](https://learn.microsoft.com/azure/foundry/agents/concepts/hosted-agents)
