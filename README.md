@@ -14,6 +14,7 @@
 | 我想做什么 | 直接进入主手册 |
 | --- | --- |
 | 了解架构与组件职责 | [总体架构](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#architecture) |
+| 创建 Foundry Project、模型和资源组 | [创建 Foundry 资源](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#foundry-provision) |
 | 本地运行与 Prompt 调试 | [本地运行与调试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#local-debug) |
 | 部署并调用 Hosted Agent | [托管部署](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#hosted-deployment) |
 | 执行 Agent Prompt Smoke Test | [Prompt 测试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#prompt-testing) |

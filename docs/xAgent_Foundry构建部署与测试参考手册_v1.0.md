@@ -109,7 +109,13 @@ MAF 负责 Agent 代码与工作流；Foundry 负责托管、版本、身份、e
 
 ## 4. 实验环境与动态资源发现
 
-Azure 资源名称由伙伴自己的 azd 环境、资源组和唯一后缀决定。完成 Provision 后执行：
+Azure 资源名称由使用者自己的 azd environment、资源组和唯一后缀决定。
+
+如果尚未创建 Foundry Project、模型部署和资源组，请先完成[第 8 节：创建 Foundry 资源](#foundry-provision)。
+Provision 必须在克隆仓库后的**项目根目录**执行，也就是能够看到 `azure.yaml`、`README.md`、`infra` 和 `src` 的目录；
+不要在 `docs` 或 `src/agent-framework-agent-basic-responses` 目录中执行。
+
+如果资源已经存在，并且当前终端已选择对应的 azd environment，则在项目根目录执行：
 
 ```powershell
 $ctx = .\scripts\get-lab-context.ps1
@@ -187,9 +193,21 @@ xAgent 采用 Hosted Agent，支持 Python 自定义代码、依赖管理、版�
 xAgent 设置 `store=False`，Agent 进程不自行持久化消息。会话与 conversation 由 Foundry Hosting 和
 Responses Protocol 管理。生产应用仍应绑定 tenant、user、business session、Agent conversation 和数据访问范围。
 
+<a id="foundry-provision"></a>
+
 ## 8. 创建 Foundry 资源
 
 本节说明如何创建自己的实验资源。如果只需阅读架构或查看现有环境，可跳过首次 Provision。
+
+以下命令全部在仓库根目录执行：
+
+```powershell
+git clone https://github.com/mason1002/msfoundry-hosted-agent-lab.git
+cd .\msfoundry-hosted-agent-lab
+Test-Path .\azure.yaml
+```
+
+`Test-Path` 应返回 `True`。如果已经克隆并打开仓库，只需切换到包含 `azure.yaml` 的目录，无需再次克隆。
 
 ### 8.1 前置检查
 
@@ -203,13 +221,21 @@ azd extension list
 
 ### 8.2 先预览再创建
 
+首次使用本仓库时，先创建本地 azd environment。名称只用于区分本机上的不同部署，不是固定的 Azure 资源名称：
+
 ```powershell
-$env:AZURE_DEV_USER_AGENT = 'microsoft_foundry_skill'
-azd provision --preview --no-prompt
-azd provision --no-state --no-prompt
+azd env new xagent-lab
 ```
 
-确认预览只包含新的训练 RG 和预期资源。创建后读取配置：
+根据提示选择 Azure Subscription 和 Region。然后先预览，再创建资源：
+
+```powershell
+$env:AZURE_DEV_USER_AGENT = 'microsoft_foundry_skill'
+azd provision --preview
+azd provision
+```
+
+确认预览只包含新的实验资源组、Foundry Account/Project、模型部署和预期依赖。Provision 成功后读取配置：
 
 ```powershell
 azd env get-values
@@ -631,7 +657,7 @@ Portal：Agent > **Monitor** > Settings > **Red team scans**，选择模板、�
 azd down --purge --force
 ```
 
-清理前确认当前 azd environment、Resource Group、是否需保留 Evaluation/Trace，以及是否仍有人使用训练环境。
+清理前确认当前 azd environment、Resource Group、是否需保留 Evaluation/Trace，以及是否仍有人使用实验环境。
 
 ## 17. 官方参考资料
 
