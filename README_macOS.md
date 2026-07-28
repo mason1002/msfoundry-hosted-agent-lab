@@ -13,7 +13,6 @@ ms.topic: tutorial
 | --- | --- | --- |
 | Foundry 构建、托管部署与测试参考手册 | Hosting 接入、Provision、Deploy、测试策略与验收标准 | [Markdown](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md) · [PDF](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.pdf) |
 | 性能、安全、遥测与 Guardrails 实验手册 | Session、Trace、Monitor、Evaluation、Guardrail、性能与告警的独立实验和实测截图 | [Markdown](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) · [PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
-| 端到端部署与测试演示文稿 | 约 1 小时技术分享，含架构图、实测截图和逐页口播备注 | [下载 PPTX](docs/Foundry_Hosted_Agent_部署与测试_演示文稿.pptx) |
 | 项目首页 | 项目定位、技术路径、关键文件和跨平台测试入口 | [README.md](README.md) |
 
 本文件专门提供 macOS 命令与路径。先按本文件完成环境准备和部署，再使用参考手册理解整体方法，按需进入实验手册执行平台验证。

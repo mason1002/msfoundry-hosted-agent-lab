@@ -4,6 +4,7 @@
 .venv*/
 **/.env
 **/.venv*/
+docs/*.pptx
 **/__pycache__/
 **/*.pyc
 src/*/.agent_configs/
