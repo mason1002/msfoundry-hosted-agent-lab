@@ -10,12 +10,14 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
 
 ## 文档导航
 
-| 文档 | Markdown | PDF |
+| 文档 | 定位 | 入口 |
 | --- | --- | --- |
-| Microsoft Foundry Agent 托管部署与测试参考手册 | [在线阅读](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.pdf) |
-| 性能、安全、遥测与 Guardrails 实验手册 | [在线阅读](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) | [下载 PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
+| Microsoft Foundry Agent 托管部署与测试参考手册 | 面向开发、架构和平台工程人员；说明 Hosting 接入、Provision、Deploy、测试策略与验收标准 | [Markdown](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md) · [PDF](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.pdf) |
+| 性能、安全、遥测与 Guardrails 实验手册 | 面向测试、运维和安全人员；提供 Session、Trace、Monitor、Evaluation、Guardrail、性能与告警的独立实验和实测截图 | [Markdown](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) · [PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
+| 端到端部署与测试演示文稿 | 面向约 1 小时技术分享；26 页，包含架构图、实测截图、页码和逐页口播备注 | [下载 PPTX](docs/Foundry_Hosted_Agent_部署与测试_演示文稿.pptx) |
+| macOS 操作指南 | 面向 Intel 与 Apple Silicon Mac；提供 zsh、Homebrew、az/azd、部署、测试和清理步骤 | [README_macOS.md](README_macOS.md) |
 
-两份手册均按单项任务编排。直接进入目标章节，按该节列出的前提、命令、样例和通过标准执行，无需先完成其他测试。
+先用参考手册完成端到端接入并确定验收要求，再按需要从实验手册选择验证项目。macOS 用户先阅读操作指南，命令和路径均已按 macOS 环境调整。
 
 ### 按任务快速跳转
 

@@ -612,7 +612,7 @@ Target-based Evaluation 适用于同步、非流式 Responses/Invocations。A2A�
 
 | 错误 | 常见原因 | 处理 |
 | --- | --- | --- |
-| `missing_project_endpoint` | azd 环境未同步 endpoint | 设置 `AZURE_AI_PROJECT_ENDPOINT` |
+| `missing_project_endpoint` | azd 环境未同步 endpoint | 设置 `FOUNDRY_PROJECT_ENDPOINT` |
 | 模型 404 | 模型部署名错误或环境覆盖 `.env` | 同步模型部署名 |
 | 401/403 | 登录身份或 RBAC 不足 | 检查登录、角色和 Token audience |
 | 429 | 模型配额或速率限制 | 降低并发、有限重试或申请配额 |

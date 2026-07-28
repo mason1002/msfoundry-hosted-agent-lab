@@ -248,6 +248,10 @@ class ProjectContractTests(unittest.TestCase):
         deploy = (ROOT / "scripts" / "deploy_existing_agent.py").read_text(encoding="utf-8")
         self.assertIn("def smoke_test(", deploy)
         self.assertIn("Rolled back endpoint", deploy)
+        ensure_role = deploy.split("def ensure_role(", 1)[1].split(
+            "def ensure_telemetry_role(", 1
+        )[0]
+        self.assertIn("arm_put(", ensure_role)
 
 
 if __name__ == "__main__":

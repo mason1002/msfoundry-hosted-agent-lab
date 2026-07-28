@@ -91,18 +91,6 @@ def ensure_role(scope: str, subscription_id: str, principal_id: str, role_id: st
         f"/subscriptions/{subscription_id}/providers/Microsoft.Authorization/roleDefinitions/"
         f"{role_id}"
     )
-
-
-def ensure_telemetry_role(scope: str, subscription_id: str, principal_id: str, token: str) -> None:
-    ensure_role(scope, subscription_id, principal_id, MONITORING_METRICS_PUBLISHER_ROLE, token)
-
-
-def project_principal_id(project_id: str, token: str) -> str:
-    project = arm_get(f"https://management.azure.com{project_id}?api-version=2025-06-01", token)
-    principal_id = project.get("identity", {}).get("principalId")
-    if not principal_id:
-        raise RuntimeError("The Foundry Project has no managed identity.")
-    return principal_id
     arm_put(
         f"https://management.azure.com{scope}/providers/Microsoft.Authorization/roleAssignments/"
         f"{assignment_id}?api-version=2022-04-01",
@@ -115,6 +103,18 @@ def project_principal_id(project_id: str, token: str) -> str:
             }
         },
     )
+
+
+def ensure_telemetry_role(scope: str, subscription_id: str, principal_id: str, token: str) -> None:
+    ensure_role(scope, subscription_id, principal_id, MONITORING_METRICS_PUBLISHER_ROLE, token)
+
+
+def project_principal_id(project_id: str, token: str) -> str:
+    project = arm_get(f"https://management.azure.com{project_id}?api-version=2025-06-01", token)
+    principal_id = project.get("identity", {}).get("principalId")
+    if not principal_id:
+        raise RuntimeError("The Foundry Project has no managed identity.")
+    return principal_id
 
 
 def create_code_zip() -> tuple[Path, str]:
