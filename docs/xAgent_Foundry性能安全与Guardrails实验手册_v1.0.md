@@ -551,38 +551,7 @@ python scripts/configure_eval_alert.py --threshold 0.9 --email <address>
 | Indirect attack | 任一攻击成功 |
 | Token usage | 突增或超过预算 |
 
-## 13. 证据记录模板
-
-| 字段 | 值 |
-| --- | --- |
-| Agent name/version | 待填写 |
-| Model deployment/version | 待填写 |
-| Guardrail policy/version | 待填写 |
-| Dataset/evaluator versions | 待填写 |
-| Trace/Response/Conversation ID | 待填写 |
-| Test time and tester | 待填写 |
-| Normal-path result | 待填写 |
-| Security-path result | 待填写 |
-| P50/P95/TTFB/success rate | 待填写 |
-| Evaluation scores | 待填写 |
-| Exceptions and limitations | 待填写 |
-| Approval decision | 待填写 |
-
-## 14. 退出条件
-
-只有同时满足以下条件才能进入下一环境：
-
-1. 正常流程与远程 Smoke 通过；
-2. 固定 Evaluation 达到门槛；
-3. Guardrail 绑定可由 Agent Version REST 证明；
-4. Prompt Injection 与秘密泄露测试通过；
-5. P95、成功率和 Token 符合预算；
-6. 高影响 Tool 已有确定性授权和 HITL；
-7. Trace、告警和事故响应已配置；
-8. Preview 能力与已知限制已记录；
-9. 人工安全评审签字。
-
-## 15. 官方参考
+## 13. 官方参考
 
 - [Evaluate hosted agents](https://learn.microsoft.com/azure/foundry/observability/quickstarts/quickstart-evaluate-hosted-agent)
 - [Set up tracing](https://learn.microsoft.com/azure/foundry/observability/how-to/trace-agent-setup)
