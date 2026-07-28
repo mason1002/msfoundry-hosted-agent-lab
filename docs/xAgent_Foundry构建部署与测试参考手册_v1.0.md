@@ -21,7 +21,7 @@
 | 查看 Monitor 指标与告警 | [Agent Monitoring Dashboard](#agent-monitoring) |
 | 配置并验证 Guardrails | [Guardrails](#guardrails) |
 | 执行性能与负载测试 | [性能测试](#performance-testing) |
-| 查看真实测试结果与截图 | [测试证据](#test-evidence) |
+| 查看真实测试结果 | [测试证据](#test-evidence) |
 | 删除实验资源 | [清理](#cleanup) |
 
 ---
@@ -384,10 +384,6 @@ Evaluation、Guardrails、Trace、Monitor 或性能测试，也不应用作生�
 Windows 将两处 `.venv-dev/bin/python` 改为 `.venv-dev\Scripts\python.exe`，并将启动路径改为
 `..\..\.venv-dev\Scripts\python.exe devui.py`。
 
-![MAF DevUI 实际对话与 Events](images/devui-chat.png)
-
-![MAF DevUI 实际 OTel Traces](images/devui-traces.png)
-
 ### 9.2 验证部署依赖
 
 使用将要提交给远程构建的依赖清单创建干净环境，避免“本机能运行但远程缺包”：
@@ -657,6 +653,15 @@ Dashboard 重点查看：
 
 Monitor 右上角 Settings 可配置 Continuous Evaluation、Scheduled Evaluation、Red Team Scan 和 Alerts；Preview 能力没有生产 SLA，应在非生产环境先验证。
 
+![Foundry Hosted Agent Monitor 实际页面](images/foundry-agent-monitor.png)
+
+上图为实际 Monitor 页面。页面显示 Token 为 0 时，不要直接判断“没有遥测”；继续检查 Settings 和 Application Insights。
+
+![Foundry Monitor Settings 实际配置](images/foundry-monitor-settings.png)
+
+检查 Settings 中的 Application Insights 连接和 Continuous evaluation 状态。Portal 控件只表示对应 Portal 配置状态；
+使用 SDK 或 ARM 创建的 Schedule 与 Alert 仍应分别通过 SDK 和 Azure Monitor 核验。
+
 Dashboard 有数据必须同时满足：Hosted Agent 已产生真实流量、Project 已连接 Application Insights、
 平台或应用层 exporter 已配置，并且遥测已完成摄取。可执行：
 
@@ -669,17 +674,17 @@ python scripts/verify_monitoring.py
 `send_traffic.py`。通过标准：容器 exporter 为 `True`；App Insights 至少一个表的行数大于 0；
 GenAI 结果中 `invoke_agent` 的 Span 和 Token 大于 0。
 
-真实遥测验证结果（2026-07-27，Agent 资源名称已省略）：
+真实遥测验证结果（2026-07-28，Agent 资源名称已省略）：
 
 ```text
 Agent version: v11
 Application Insights configured in container: True
-traces: 583
-dependencies: 158
-invoke_agent spans: 15
-input tokens: 1543
-output tokens: 3634
+invoke_agent spans: 16
+input tokens: 1651
+output tokens: 3835
 ```
+
+![Application Insights 中的 GenAI Span 与 Token](images/azure-monitor-genai.png)
 
 新建连接、角色或 Agent Version 后可能需要等待摄取和调度周期；不能仅凭请求成功判断 Monitor 已可用。
 
@@ -845,8 +850,10 @@ Average: 14955 ms    Median: 14955 ms
 
 | 证据 | 内容 | 使用限制 |
 | --- | --- | --- |
-| [DevUI 对话与 Events](images/devui-chat.png) | 同一 xAgent 的实际响应、Events 和 Token | 只证明本地行为与事件链路 |
-| [DevUI OTel Traces](images/devui-traces.png) | Agent/模型 Span、耗时和 Token | 只证明本地 OTel Trace |
+| [Foundry Agent Monitor](images/foundry-agent-monitor.png) | Monitor 页面、时间范围和 Portal 聚合状态 | Preview 聚合为空时继续查 App Insights |
+| [Foundry Monitor Settings](images/foundry-monitor-settings.png) | App Insights 连接与持续评估状态 | Portal 状态不替代 SDK/ARM 权威查询 |
+| [Application Insights Logs](images/azure-monitor-genai.png) | 实际 GenAI Span 与 Token 聚合 | 计数随时间范围和流量变化 |
+| [Azure Monitor Alert](images/azure-monitor-eval-alert.png) | 评估通过率阈值、信号类型和启用状态 | 规则启用不代表已产生评估事件 |
 | 第 11.2 节文本结果 | Local/Hosted 两样例对比 | 延迟为单次观测，不代表 SLA |
 | 第 12.3 节文本结果 | v11 App Insights 摄取与 GenAI spans | 计数随时间范围和流量变化 |
 | 第 13.6 节文本结果 | Locust 最小链路 | 单请求不能计算稳定分位数 |

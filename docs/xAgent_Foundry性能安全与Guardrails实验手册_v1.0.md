@@ -176,12 +176,6 @@ azd ai agent monitor --session-id <session-id> --type system
 | Dependency | endpoint 类型、状态码、耗时 |
 | Exception | 错误类型、位置、关联 Trace |
 
-本地 DevUI 也可独立验证 OTel Trace 结构。执行 `python devui.py`，发送合成请求，再打开 **Traces**：
-
-![MAF DevUI 实际 OTel Traces](images/devui-traces.png)
-
-该截图只证明本地 MAF OTel 链路。Hosted Trace 仍以 Foundry Portal 或 Application Insights 为准。
-
 <a id="monitor-dashboard"></a>
 
 ## 6. 实验三：Monitor Dashboard
@@ -212,21 +206,28 @@ Portal 路径：**Build** > 目标 Hosted Agent > **Monitor**。
 
 这些能力中部分为 Preview，没有生产 SLA。仅在非生产实验环境中启用并验证。
 
+![Foundry Hosted Agent Monitor 实际页面](images/foundry-agent-monitor.png)
+
+Monitor 显示 Token 为 0 或图表为空时，打开 Settings 核对连接状态，再运行底层遥测查询。
+
+![Foundry Monitor Settings 实际配置](images/foundry-monitor-settings.png)
+
 独立验证底层遥测，不依赖 Dashboard 页面：
 
 ```bash
 python scripts/verify_monitoring.py
 ```
 
-真实结果摘要（2026-07-27，资源名称已省略）：
+真实结果摘要（2026-07-28，资源名称已省略）：
 
 ```text
 Agent version: v11
 Application Insights configured in container: True
-traces: 583    dependencies: 158
-invoke_agent spans: 15
-input tokens: 1543    output tokens: 3634
+invoke_agent spans: 16
+input tokens: 1651    output tokens: 3835
 ```
+
+![Application Insights 中的 GenAI Span 与 Token](images/azure-monitor-genai.png)
 
 <a id="fixed-evaluation"></a>
 
@@ -537,6 +538,8 @@ python scripts/configure_eval_alert.py --threshold 0.9 --email <address>
 
 告警规则与持续评估 Schedule 可分别配置。没有 `gen_ai.evaluation.result` 事件时规则不会产生有效通过率，
 但规则本身仍可完成创建和配置核验。
+
+![Azure Monitor 中已启用的 Evaluation 告警](images/azure-monitor-eval-alert.png)
 
 建议告警：
 

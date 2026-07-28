@@ -83,14 +83,6 @@ class ProjectContractTests(unittest.TestCase):
         self.assertGreaterEqual(LAB_MANUAL.count("| 独立前提 |"), 11)
         self.assertGreaterEqual(LAB_MANUAL.count("| 通过标准 |"), 11)
 
-    def test_documentation_evidence_images_exist_and_are_linked(self):
-        for filename in ("devui-chat.png", "devui-traces.png"):
-            image = ROOT / "docs" / "images" / filename
-            self.assertTrue(image.is_file(), filename)
-            self.assertGreater(image.stat().st_size, 10_000, filename)
-            self.assertIn(f"images/{filename}", REFERENCE_MANUAL)
-            self.assertIn(f"docs/images/{filename}", README)
-
     def test_all_local_markdown_links_resolve(self):
         for markdown_path in (ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md"))):
             if "端到端验证报告" in markdown_path.name:
@@ -102,6 +94,20 @@ class ProjectContractTests(unittest.TestCase):
                 relative_target = target.split("#", 1)[0]
                 resolved = (markdown_path.parent / relative_target).resolve()
                 self.assertTrue(resolved.is_file(), f"{markdown_path.name}: {target}")
+
+    def test_platform_monitoring_evidence_exists_and_is_linked(self):
+        filenames = (
+            "foundry-agent-monitor.png",
+            "foundry-monitor-settings.png",
+            "azure-monitor-genai.png",
+            "azure-monitor-eval-alert.png",
+        )
+        for filename in filenames:
+            image = ROOT / "docs" / "images" / filename
+            self.assertTrue(image.is_file(), filename)
+            self.assertGreater(image.stat().st_size, 10_000, filename)
+            self.assertIn(f"images/{filename}", REFERENCE_MANUAL)
+            self.assertIn(f"images/{filename}", LAB_MANUAL)
 
     def test_readme_document_navigation_targets_exist(self):
         links = re.findall(r"\]\((docs/[^)]+)\)", README)
