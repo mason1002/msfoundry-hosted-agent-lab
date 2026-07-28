@@ -345,7 +345,7 @@ $ctx = .\scripts\get-lab-context.ps1
 .\scripts\connect-observability.ps1
 ```
 
-跨平台连接与 Project Managed Identity 权限配置：
+连接 Application Insights 并配置 Project Managed Identity 权限：
 
 ```bash
 python scripts/connect_observability.py
