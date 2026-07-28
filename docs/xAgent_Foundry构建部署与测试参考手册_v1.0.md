@@ -21,7 +21,6 @@
 | 查看 Monitor 指标与告警 | [Agent Monitoring Dashboard](#agent-monitoring) |
 | 配置并验证 Guardrails | [Guardrails](#guardrails) |
 | 执行性能与负载测试 | [性能测试](#performance-testing) |
-| 查看真实测试结果 | [测试证据](#test-evidence) |
 | 删除实验资源 | [清理](#cleanup) |
 
 ---
@@ -62,7 +61,7 @@ Guardrails 和性能测试。
 
 - Foundry Account、Project 和模型首次 Provision；
 - Hosted Agent 首次远程构建；
-- 完整 Evaluation、负载测试和 AI Red Teaming Scan；
+- 完整 Evaluation 和负载测试；
 - Private Endpoint、生产网络和业务 Tool 集成。
 
 每个章节同时给出背景、命令和验收条件。只想查询日志、Trace、Prompt 测试或性能测试时，可直接打开对应章节，无需从头执行全部步骤。
@@ -164,7 +163,7 @@ $ctx | Format-List
 | Log Analytics | `$ctx.LogAnalyticsName` |
 | Guardrail resource ID | `$ctx.RaiPolicyId` |
 
-资源尚未创建时，对应属性为空。实际资源名称只记录在本地测试证据中，不写入通用参考步骤。
+资源尚未创建时，对应属性为空。实际资源名称只记录在本地验证记录中，不写入通用参考步骤。
 
 ## 5. 建议阅读路径
 
@@ -379,10 +378,15 @@ Evaluation、Guardrails、Trace、Monitor 或性能测试，也不应用作生�
 | 启动 | 进入服务目录，执行 `../../.venv-dev/bin/python devui.py` |
 | 地址 | `http://127.0.0.1:8080`；仅绑定本机，不对公网开放 |
 | 样例 | `请用两点说明如何验证 Hosted Agent。` |
-| 通过标准 | 显示 xAgent 响应；Events 完成；Traces 出现 Agent 和模型 Span；Token 大于 0 |
+| 通过标准 | 显示 xAgent 响应；Events 依次出现 created、in_progress 和输出事件 |
 
 Windows 将两处 `.venv-dev/bin/python` 改为 `.venv-dev\Scripts\python.exe`，并将启动路径改为
 `..\..\.venv-dev\Scripts\python.exe devui.py`。
+
+![MAF DevUI 中的 xAgent 对话与 Events](images/devui-agent-behavior.png)
+
+上图显示同一个 `create_agent()` 在本地 DevUI 中完成响应，并在 Events 面板记录 Responses 事件。
+DevUI 用于本地行为检查，不替代 Hosted Agent 的远程验证。
 
 ### 9.2 验证部署依赖
 
@@ -619,6 +623,10 @@ azd ai agent monitor --session-id <session-id> --type system
 
 Session 日志适合即时排错：容器冷启动、Managed Identity、模型 403/429、依赖错误和 Tool 异常。它不是跨 Session 趋势监控的替代品。
 
+![Foundry Sessions 中的 Hosted Runtime 会话](images/foundry-sessions-v16.png)
+
+Sessions 显示运行状态、Agent Version、创建时间和到期时间。出现 Session 只证明托管运行时已分配执行环境。
+
 <a id="agent-traces"></a>
 
 ### 12.2 Foundry Portal Trace
@@ -637,6 +645,10 @@ Server-side Tracing 对 Foundry Hosted Agent 可自动启用，无需修改 MAF 
 
 Trace 可能包含 Prompt、输出、Tool 参数和 Tool 返回。必须把 Trace 当作生产数据控制访问、保留期与脱敏策略。
 
+![Foundry Traces 中的 Agent 调用](images/foundry-traces-v16.png)
+
+上图显示已完成的调用、端到端耗时、输入/输出 Token、估算成本和 Agent Version。
+
 #### Sessions、Conversations 与 Traces
 
 | 视图 | 表示什么 | 何时出现 | 空白时检查什么 |
@@ -647,6 +659,10 @@ Trace 可能包含 Prompt、输出、Tool 参数和 Tool 返回。必须把 Trac
 
 Sessions 有记录只能证明托管容器运行过，不能证明请求创建了 Conversation，也不能证明 Trace 已具备 Portal 关联字段。
 `responses.create(input=...)` 可以成功返回并创建 Session，但不会自动出现在 Conversations 视图。
+
+![Foundry Conversations 中的 Responses 对话](images/foundry-conversations-v16.png)
+
+Conversations 聚合同一对话中的调用。需要多轮上下文时，显式创建或传入 Conversation ID。
 
 先检查页面右上角的 **Version** 下拉框。Traces、Conversations 和 Sessions 均按选中的 Agent Version 显示；
 endpoint 已路由到新版本时，旧版本页面不会显示新版本产生的 Trace。使用 `azd ai agent show --output json`
@@ -676,14 +692,9 @@ Dashboard 重点查看：
 
 Monitor 右上角 Settings 可配置 Continuous Evaluation、Scheduled Evaluation、Red Team Scan 和 Alerts；Preview 能力没有生产 SLA，应在非生产环境先验证。
 
-![Foundry Hosted Agent Monitor 实际页面](images/foundry-agent-monitor.png)
+![Foundry Hosted Agent Monitor](images/foundry-monitor-v16.png)
 
-上图为实际 Monitor 页面。页面显示 Token 为 0 时，不要直接判断“没有遥测”；继续检查 Settings 和 Application Insights。
-
-![Foundry Monitor Settings 实际配置](images/foundry-monitor-settings.png)
-
-检查 Settings 中的 Application Insights 连接和 Continuous evaluation 状态。Portal 控件只表示对应 Portal 配置状态；
-使用 SDK 或 ARM 创建的 Schedule 与 Alert 仍应分别通过 SDK 和 Azure Monitor 核验。
+上图显示当前时间范围内的 Agent runs、Token usage、估算成本和错误率。切换时间范围后再比较趋势。
 
 Dashboard 有数据必须同时满足：Hosted Agent 已产生真实流量、Project 已连接 Application Insights、
 平台或应用层 exporter 已配置，并且遥测已完成摄取。可执行：
@@ -697,22 +708,19 @@ python scripts/verify_monitoring.py
 `send_traffic.py`。通过标准：容器 exporter 为 `True`；App Insights 至少一个表的行数大于 0；
 GenAI 结果中 `invoke_agent` 的 Span 和 Token 大于 0。
 
-真实遥测验证结果（2026-07-28，Agent 资源名称已省略）：
+当前验证结果：
 
 ```text
-Agent version: v11
+Agent version: v16
 Application Insights configured in container: True
-invoke_agent spans: 16
-input tokens: 1651
-output tokens: 3835
+Hosted spans: 37
+With project/response correlation: 37
+With conversation correlation: 1
 ```
-
-![Application Insights 中的 GenAI Span 与 Token](images/azure-monitor-genai.png)
 
 新建连接、角色或 Agent Version 后可能需要等待摄取和调度周期；不能仅凭请求成功判断 Monitor 已可用。
 
-Monitor 是 Traces 和 Evaluation 的聚合视图。Sessions 有记录但 Traces 为空时，Monitor 仍会显示 Token 0 和空图表。
-先修复 Hosted Trace 关联，再等待 Portal 索引；不要反复创建 Session 作为替代验证。
+Monitor 是 Traces 和 Evaluation 的聚合视图。先确认页面选择的 Agent Version 与 endpoint 当前路由版本一致。
 
 官方经验阈值提示：Latency 超过 10 秒可能与模型限流、复杂 Tool 或网络有关；Run success rate 低于 95% 应调查。但实际 SLA 必须按业务和负载测试确定。
 
@@ -743,6 +751,10 @@ az monitor app-insights query `
   --resource-group $ctx.ResourceGroup `
   --analytics-query '<KQL>'
 ```
+
+![Application Insights Logs 中的 GenAI Span 与 Token](images/azure-monitor-genai.png)
+
+查询结果用于核对底层 Span 和 Token。图中计数会随时间范围和流量变化。
 
 ## 13. 安全与治理基线
 
@@ -786,6 +798,10 @@ Agent Guardrails 当前为 Preview：
 也可在 Agent Playground 左侧 Guardrails > **Manage** > **Assign a new guardrail**。
 Agent-level Guardrail 会覆盖底层模型 Guardrail，因此必须确认 Tool call/response intervention point 是否显式配置。
 
+![Foundry Guardrails 中的策略分配](images/foundry-guardrail-assignment.png)
+
+上图显示 `Microsoft.DefaultV2` 已应用到 Hosted Agent 和模型。部署验收仍以 Agent Version 的 `rai_config` 为准。
+
 ### 13.3 CLI/REST 绑定 Hosted Agent Guardrail
 
 官方 `azure.yaml` 形状：
@@ -813,16 +829,18 @@ Guardrail 部署验收以 Agent Version REST 返回的 `definition.rai_config` �
 5. 查看 Trace/日志中的 content filter annotation；
 6. 记录策略版本、Agent 版本、测试样本和实际结果。
 
+使用正常请求和经过审批的合成安全样例分别调用 Hosted Agent。共享证据前遮罩风险文本和 Request ID。
+
+![Guardrail 输入阶段阻断实测](images/guardrail-content-filter-v16.png)
+
+上图来自真实 SDK 调用：合成 Self-harm 样例在输入阶段返回 HTTP 400、`content_filter`。
+HTTP 200 后由模型拒绝回答，只能证明模型或 Agent 拒绝，不能替代平台 Guardrail 命中证据。
+
 ### 13.5 AI Red Teaming
 
-Foundry AI Red Teaming Agent 可进行自动对抗扫描并报告 Attack Success Rate（ASR）。推荐在隔离的 purple environment 运行，不对生产数据和真实高风险 Tool 直接攻击。
-
-风险类别包括内容风险、Protected Material、代码漏洞、敏感数据泄露、Prohibited Actions、Task Adherence
-与间接 Prompt Injection。Agentic 风险中的部分能力仅支持 Cloud、英文或受支持的 Azure Tool；结果可能有误报，必须人工复核。
-
-截至本手册验证时点，Hosted Agent 云端 Red Team 路径尚不受支持。应对 `azd ai agent run` 的本地 endpoint
-使用受支持的本地 Preview Red Team；Portal、目标类型和区域支持更新后，再验证 Hosted Agent 云端扫描。
-入口缺失不应直接判断为部署或权限错误。保留扫描版本、限制、报告和 ASR 趋势。
+当前不支持对 Foundry Hosted Agent 运行云端 AI Red Teaming。不要在本 Lab 中配置替代的本地攻击流程。
+功能范围更新后，按官方文档确认目标类型、区域和风险类别支持：
+[AI Red Teaming Agent](https://learn.microsoft.com/azure/foundry/concepts/ai-red-teaming-agent)。
 
 <a id="performance-testing"></a>
 
@@ -843,7 +861,8 @@ Foundry AI Red Teaming Agent 可进行自动对抗扫描并报告 Attack Success
 
 ```bash
 python scripts/send_traffic.py --count 10 --delay 1
-python -m locust -f scripts/locustfile.py --headless -u 5 -r 1 -t 2m
+python -m locust -f scripts/locustfile.py --headless -u 3 -r 1 -t 90s \
+  --html .foundry/results/locust-report.html
 ```
 
 先从低并发、短时长开始，明确模型配额和成本上限后再扩大。
@@ -851,12 +870,16 @@ python -m locust -f scripts/locustfile.py --headless -u 5 -r 1 -t 2m
 独立前提：只运行顺序流量时安装 `requirements-ops.txt`；只运行 Locust 时同时安装
 `requirements-load.txt`。单请求 smoke 可证明压测链路可用，但不能形成 P95/P99 基线。
 
-真实最小链路结果（2026-07-27）：
+该命令执行小规模 Hosted Agent 并发基线：3 个并发用户，以每秒 1 个用户启动，持续 90 秒；
+只使用正常短请求，不混入 Guardrail 攻击样例。
 
-```text
-Users: 1    Requests: 1    Failures: 0
-Average: 14955 ms    Median: 14955 ms
-```
+> [!IMPORTANT]
+> 负载测试使用正常请求集。将预期被 Guardrail 阻断的样例混入 Locust 会把安全控制命中错误计算为性能失败。
+
+![Locust Hosted Agent 请求与响应时间统计](images/locust-v16-statistics.png)
+
+本次实测完成 15 次请求、0 失败；平均 14.66 秒，P50 14 秒，P90 16 秒，P95 25 秒。
+样本量较小，只作为当前配置的初始基线，不代表容量上限或生产 SLA。
 
 不要只优化延迟而牺牲任务正确率、安全或 Groundedness。性能基线必须和固定 Evaluation Dataset 一起比较。
 
@@ -870,24 +893,7 @@ Average: 14955 ms    Median: 14955 ms
 6. 连接 Application Insights，检查 Session 日志、Trace 和 Monitor；
 7. 运行质量、安全、Guardrail 和性能测试，形成版本门禁。
 
-<a id="test-evidence"></a>
-
-## 15. 测试证据
-
-| 证据 | 内容 | 使用限制 |
-| --- | --- | --- |
-| [Foundry Agent Monitor](images/foundry-agent-monitor.png) | Monitor 页面、时间范围和 Portal 聚合状态 | Preview 聚合为空时继续查 App Insights |
-| [Foundry Monitor Settings](images/foundry-monitor-settings.png) | App Insights 连接与持续评估状态 | Portal 状态不替代 SDK/ARM 权威查询 |
-| [Application Insights Logs](images/azure-monitor-genai.png) | 实际 GenAI Span 与 Token 聚合 | 计数随时间范围和流量变化 |
-| [Azure Monitor Alert](images/azure-monitor-eval-alert.png) | 评估通过率阈值、信号类型和启用状态 | 规则启用不代表已产生评估事件 |
-| 第 11.2 节文本结果 | Local/Hosted 两样例对比 | 延迟为单次观测，不代表 SLA |
-| 第 12.3 节文本结果 | v11 App Insights 摄取与 GenAI spans | 计数随时间范围和流量变化 |
-| 第 13.6 节文本结果 | Locust 最小链路 | 单请求不能计算稳定分位数 |
-
-共享新证据前删除订阅 ID、租户 ID、资源 ID、endpoint、Bearer Token、连接字符串、个人邮箱、
-本地绝对路径和真实业务数据。保留测试时间、Agent Version、方法、样例类别和通过标准。
-
-## 16. 验证清单
+## 15. 验证清单
 
 | 验收项 | 通过标准 |
 | --- | --- |
@@ -897,7 +903,7 @@ Average: 14955 ms    Median: 14955 ms
 | Provision | 所有资源只创建在指定新 RG |
 | 本地测试 | 本地 invoke 返回符合指令的响应 |
 | 托管部署 | Agent 状态 active/deployed，endpoint 可用 |
-| 远程测试 | 远程 invoke 成功并记录测试证据 |
+| 远程测试 | 远程 invoke 成功并保留验证记录 |
 | 评估 | eval suite 已生成，至少一次 eval run 可追踪 |
 | 安全 | 文件与输出中无 Token/API Key/客户敏感名称 |
 | 清理 | 能说明并执行 `azd down` 的影响范围 |
@@ -908,7 +914,7 @@ Average: 14955 ms    Median: 14955 ms
 
 <a id="cleanup"></a>
 
-## 17. 清理
+## 16. 清理
 
 如果环境不再用于后续验证：
 
@@ -918,7 +924,7 @@ azd down --purge --force
 
 清理前确认当前 azd environment、Resource Group、是否需保留 Evaluation/Trace，以及是否仍有人使用实验环境。
 
-## 18. 官方参考资料
+## 17. 官方参考资料
 
 - [Microsoft Foundry documentation](https://learn.microsoft.com/azure/foundry/)
 - [Foundry Hosted Agents](https://learn.microsoft.com/azure/foundry/agents/concepts/hosted-agents)

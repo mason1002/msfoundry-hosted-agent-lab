@@ -16,7 +16,7 @@ ms.topic: tutorial
 
 ### 按任务快速跳转
 
-| 我想做什么 | 直接进入主手册 |
+| 任务 | 直接进入主手册 |
 | --- | --- |
 | 了解架构与组件职责 | [总体架构](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#architecture) |
 | 本地运行与 Prompt 调试 | [本地运行与调试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#local-debug) |
@@ -63,8 +63,8 @@ Agent Framework Python 代码
 > [!IMPORTANT]
 > 本实验不是免费沙盒。`azd provision` 会创建 Foundry Account、Project 和模型部署，
 > `azd deploy` 会创建 Hosted Agent，远程调用和评估会消耗模型 Token。可选的 Observability
-> 步骤还会创建 Application Insights 和 Log Analytics。开始前，讲师应提供专用订阅、已验证支持
-> `gpt-5.4-mini` 的区域和足够配额。学员不应使用生产订阅。
+> 步骤还会创建 Application Insights 和 Log Analytics。开始前，准备专用订阅、已验证支持
+> `gpt-5.4-mini` 的区域和足够配额。不要使用生产订阅。
 
 | 阶段 | 是否更改 Azure | 是否可能产生费用 |
 | --- | --- | --- |
@@ -111,14 +111,14 @@ azd version
 uv --version
 ```
 
-### 登录并选择培训订阅
+### 登录并选择实验订阅
 
 在项目根目录登录 Azure。浏览器无法自动打开时，`az login --use-device-code` 可改用设备代码登录。
 
 ```bash
 az login
 az account list --output table
-az account set --subscription "<讲师提供的订阅名称或 ID>"
+az account set --subscription "<实验订阅名称或 ID>"
 az account show --query '{name:name,id:id,tenantId:tenantId}' --output table
 export AZURE_TENANT_ID="$(az account show --query tenantId --output tsv)"
 azd auth login --tenant-id "$AZURE_TENANT_ID"
@@ -130,34 +130,34 @@ azd extension show azure.ai.agents
 
 `azure.ai.agents` 扩展提供 `azure.ai.agent` host。`azure.yaml` 中的
 `requiredVersions` 要求该扩展不低于 `1.0.0-beta.4`。`azd auth token` 的输出被丢弃，该命令只验证
-azd 能否在目标 tenant 获取令牌。不要继续操作，直到 `az account show` 显示讲师指定的培训订阅，
+azd 能否在目标 tenant 获取令牌。不要继续操作，直到 `az account show` 显示指定的实验订阅，
 token 检查成功，且扩展状态显示已安装。
 
-如果 Preview 报告 `failed to resolve user access to subscription`，通常是 azd 仍缓存上一次培训的
-账号或 tenant。先退出两套 CLI，再使用讲师提供的 tenant ID 和订阅重新登录：
+如果 Preview 报告 `failed to resolve user access to subscription`，通常是 azd 仍缓存其他环境的
+账号或 tenant。先退出两套 CLI，再使用目标 tenant ID 和订阅重新登录：
 
 ```bash
 az logout
 azd auth logout
-az login --tenant "<讲师提供的 tenant ID>"
-az account set --subscription "<讲师提供的订阅名称或 ID>"
+az login --tenant "<目标 tenant ID>"
+az account set --subscription "<实验订阅名称或 ID>"
 export AZURE_TENANT_ID="$(az account show --query tenantId --output tsv)"
 azd auth login --tenant-id "$AZURE_TENANT_ID"
 azd auth token --tenant-id "$AZURE_TENANT_ID" >/dev/null
 ```
 
 浏览器自动选择错误账号时，改用 `az login --tenant "<tenant ID>" --use-device-code`，并在设备登录页
-明确选择讲师分配的培训账号。
+明确选择目标实验账号。
 
 ### 创建隔离的 azd environment
 
-每位学员使用独立的 environment 名称。以下命令在 macOS 默认的 zsh 和 Bash 中均可运行。
-输入讲师提供并已验证模型可用性的区域，例如 `eastus`；不要根据示例自行选择区域。
+每个实验使用独立的 environment 名称。以下命令在 macOS 默认的 zsh 和 Bash 中均可运行。
+输入已验证模型可用性的区域，例如 `eastus`；不要根据示例自行选择区域。
 
 ```bash
 export LAB_ENV_NAME="xagent-${USER:-student}"
 export AZURE_SUBSCRIPTION_ID="$(az account show --query id --output tsv)"
-printf '请输入讲师提供的 Azure 区域: '
+printf '请输入已验证的 Azure 区域: '
 read -r AZURE_LOCATION
 export AZURE_LOCATION
 
@@ -171,12 +171,12 @@ azd env get-value AZURE_LOCATION
 ```
 
 如果 `azd env new` 提示同名 environment 已存在，先运行 `azd env list`，然后为
-`LAB_ENV_NAME` 选择新的名称。不要复用其他学员或生产环境。
+`LAB_ENV_NAME` 选择新的名称。不要复用其他实验或生产环境。
 
 ### 预览并确认资源
 
 Preview 只计算资源变化，不创建或修改 Azure 资源。运行后停下来检查输出，确认目标订阅、区域、
-Resource Group、Foundry Project 和模型部署均属于本次培训。
+Resource Group、Foundry Project 和模型部署均属于本次实验。
 
 ```bash
 export AZURE_DEV_USER_AGENT=microsoft_foundry_skill
@@ -184,7 +184,7 @@ azd provision --preview --no-prompt
 ```
 
 > [!WARNING]
-> 下一条命令会创建收费资源。只有在讲师确认 Preview 和配额后才执行。培训默认流程不使用
+> 下一条命令会创建收费资源。只有在确认 Preview 和配额后才执行。实验默认流程不使用
 > `--no-state`，因为该参数会忽略已保存的部署状态并强制重新部署。
 
 ```bash
@@ -206,7 +206,7 @@ done
 ```
 
 `azd env get-values` 可能包含订阅 ID、资源 ID 和 endpoint。排障时不要把完整输出粘贴到公开聊天、
-Issue 或培训截图中。
+Issue 或共享截图中。
 
 ### 安装依赖并本地运行
 
@@ -266,8 +266,8 @@ azd env get-value AZURE_AI_MODEL_DEPLOYMENT_NAME
 ```
 
 > [!WARNING]
-> 部署、远程调用和 Evaluation 都可能产生费用。每位学员只运行一次 smoke test；批量评估应由讲师
-> 明确安排。
+> 部署、远程调用和 Evaluation 都可能产生费用。只运行必要的 smoke test；批量评估应先确认
+> 成本和配额。
 
 ```bash
 export AZURE_DEV_USER_AGENT=microsoft_foundry_skill
@@ -364,8 +364,8 @@ azd env list
 azd env get-value AZURE_RESOURCE_GROUP
 ```
 
-确认活动 environment 和 Resource Group 都属于自己后，再执行交互式清理。培训步骤故意不使用
-`--force`，学员必须阅读并确认删除提示。
+确认活动 environment 和 Resource Group 都属于当前实验后，再执行交互式清理。本步骤不使用
+`--force`，执行者必须阅读并确认删除提示。
 
 ```bash
 azd down --purge
@@ -408,7 +408,7 @@ done
 | 防护栏 | `AZURE_AI_RAI_POLICY_ID` |
 
 部分 azd environment 值包含资源 ID 和 endpoint。只在本地查看，不要把完整输出粘贴到公开聊天、
-Issue 或培训截图中。
+Issue 或共享截图中。
 
 ## 常用命令
 
@@ -465,4 +465,4 @@ azd down --purge
 ```
 
 该命令会删除本 azd 环境创建的 Resource Group、Foundry Project、模型部署和相关数据。
-培训材料不使用 `--force`，执行者必须阅读并确认删除提示。
+本指南不使用 `--force`，执行者必须阅读并确认删除提示。

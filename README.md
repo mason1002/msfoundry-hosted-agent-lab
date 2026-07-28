@@ -33,7 +33,6 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
 | 查看 Monitor 指标与告警 | [Agent Monitoring Dashboard](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#agent-monitoring) |
 | 配置并验证 Guardrails | [Guardrails](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#guardrails) |
 | 执行性能与负载测试 | [性能测试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#performance-testing) |
-| 查看真实测试结果 | [测试证据](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#test-evidence) |
 
 具体命令、适用场景和执行顺序请参阅参考手册。
 

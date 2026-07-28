@@ -104,18 +104,30 @@ class ProjectContractTests(unittest.TestCase):
                 self.assertTrue(resolved.is_file(), f"{markdown_path.name}: {target}")
 
     def test_platform_monitoring_evidence_exists_and_is_linked(self):
-        filenames = (
-            "foundry-agent-monitor.png",
-            "foundry-monitor-settings.png",
+        shared_filenames = (
+            "foundry-monitor-v16.png",
+            "foundry-traces-v16.png",
+            "foundry-conversations-v16.png",
+            "foundry-sessions-v16.png",
             "azure-monitor-genai.png",
-            "azure-monitor-eval-alert.png",
+            "foundry-guardrail-assignment.png",
+            "guardrail-content-filter-v16.png",
+            "locust-v16-statistics.png",
         )
-        for filename in filenames:
+        for filename in shared_filenames:
             image = ROOT / "docs" / "images" / filename
             self.assertTrue(image.is_file(), filename)
             self.assertGreater(image.stat().st_size, 10_000, filename)
             self.assertIn(f"images/{filename}", REFERENCE_MANUAL)
             self.assertIn(f"images/{filename}", LAB_MANUAL)
+
+        main_only = "devui-agent-behavior.png"
+        self.assertIn(f"images/{main_only}", REFERENCE_MANUAL)
+        self.assertGreater((ROOT / "docs" / "images" / main_only).stat().st_size, 10_000)
+
+        lab_only = "azure-monitor-eval-alert.png"
+        self.assertIn(f"images/{lab_only}", LAB_MANUAL)
+        self.assertGreater((ROOT / "docs" / "images" / lab_only).stat().st_size, 10_000)
 
     def test_readme_document_navigation_targets_exist(self):
         links = re.findall(r"\]\((docs/[^)]+)\)", README)
@@ -128,13 +140,13 @@ class ProjectContractTests(unittest.TestCase):
                 target_text = target_path.read_text(encoding="utf-8")
                 self.assertIn(f'<a id="{anchor}"></a>', target_text)
 
-    def test_readme_macos_training_flow_is_safe_and_reproducible(self):
+    def test_readme_macos_lab_flow_is_safe_and_reproducible(self):
         macos_section = MACOS_README.split("## macOS 快速开始", 1)[1].split(
             "## 获取自己的训练环境", 1
         )[0]
 
         ordered_steps = [
-            'az account set --subscription "<讲师提供的订阅名称或 ID>"',
+            'az account set --subscription "<实验订阅名称或 ID>"',
             'export AZURE_TENANT_ID="$(az account show --query tenantId --output tsv)"',
             'azd auth login --tenant-id "$AZURE_TENANT_ID"',
             'azd auth token --tenant-id "$AZURE_TENANT_ID" >/dev/null',
@@ -221,8 +233,8 @@ class ProjectContractTests(unittest.TestCase):
         self.assertTrue((scripts / "run_ops.cmd").is_file())
 
     def test_docs_state_hosted_red_team_current_limit(self):
-        self.assertIn("Hosted Agent 云端 Red Team 路径尚不受支持", REFERENCE_MANUAL)
-        self.assertIn("本地 endpoint", REFERENCE_MANUAL)
+        self.assertIn("不支持对 Foundry Hosted Agent 运行云端 AI Red Teaming", REFERENCE_MANUAL)
+        self.assertNotIn("本地 Preview Red Team", REFERENCE_MANUAL)
 
     def test_local_dependency_groups_are_separate(self):
         service = ROOT / "src" / "agent-framework-agent-basic-responses"
