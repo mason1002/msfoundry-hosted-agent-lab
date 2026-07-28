@@ -8,20 +8,17 @@
 
 ## 目录与快速入口
 
-| 任务 | 直接跳转 |
+| 目标 | 直接跳转 |
 | --- | --- |
-| 了解整体架构与组件职责 | [总体架构](#architecture) |
+| 理解架构、组件职责与 Agent 生命周期 | [总体架构](#architecture) · [Agent 生命周期](#agent-lifecycle) |
 | 为已有 MAF Agent 选择并实现托管协议 | [Hosting 接入检查](#hosting-adaptation) |
+| 创建 Foundry 资源 | [创建 Foundry 资源](#foundry-provision) |
 | 部署前验证 Hosting 兼容性 | [本地 Hosting 验证](#local-debug) |
 | 部署并调用 Hosted Agent | [托管部署](#hosted-deployment) |
-| 执行 Agent Prompt Smoke Test | [Prompt 测试](#prompt-testing) |
-| 执行批量质量与安全评估 | [Evaluation](#evaluation) |
-| 查看 Agent Session 日志 | [Hosted Session 日志](#agent-session-logs) |
-| 查看 Foundry Trace 与 Span | [Foundry Portal Trace](#agent-traces) |
-| 查看 Monitor 指标与告警 | [Agent Monitoring Dashboard](#agent-monitoring) |
-| 配置并验证 Guardrails | [Guardrails](#guardrails) |
-| 执行性能与负载测试 | [性能测试](#performance-testing) |
-| 删除实验资源 | [清理](#cleanup) |
+| 执行 Prompt Smoke Test 与批量评估 | [Prompt 测试](#prompt-testing) · [Evaluation](#evaluation) |
+| 查询 Session 日志、Trace 与 Monitor | [Hosted Session 日志](#agent-session-logs) · [Foundry Portal Trace](#agent-traces) · [Agent Monitoring Dashboard](#agent-monitoring) |
+| 配置 Guardrails 并执行性能测试 | [Guardrails](#guardrails) · [性能测试](#performance-testing) |
+| 核对验收项并清理资源 | [验证清单](#validation-checklist) · [清理](#cleanup) |
 
 ---
 
@@ -65,15 +62,6 @@ Guardrails 和性能测试。
 - Private Endpoint、生产网络和业务 Tool 集成。
 
 每个章节同时给出背景、命令和验收条件。只想查询日志、Trace、Prompt 测试或性能测试时，可直接打开对应章节，无需从头执行全部步骤。
-
-### 2.3 两份手册的边界
-
-| 文档 | 主要读者 | 回答的问题 | 内容边界 |
-| --- | --- | --- | --- |
-| 本参考手册 | 开发、架构与平台工程人员 | 如何把已有 MAF Agent 接入、部署并定义测试策略 | 架构、Hosting 接入、Provision、Deploy、测试方法和验收标准 |
-| [性能、安全与 Guardrails 实验手册](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) | 测试、运维与安全人员 | 如何独立执行平台验证并判定结果 | Session、Trace、Monitor、Evaluation、Guardrail、性能和告警的步骤与实测截图 |
-
-平台实测截图集中保留在实验手册。本手册只说明接入方法、原理和验收要求，避免同一证据在两份文档中重复出现。
 
 <a id="architecture"></a>
 
@@ -137,7 +125,7 @@ MAF 负责 Agent 代码与工作流；Foundry 负责托管、版本、身份、e
 
 Azure 资源名称由使用者自己的 azd environment、资源组和唯一后缀决定。
 
-如果尚未创建 Foundry Project、模型部署和资源组，请先完成[第 8 节：创建 Foundry 资源](#foundry-provision)。
+如果尚未创建 Foundry Project、模型部署和资源组，请先完成[第 7 节：创建 Foundry 资源](#foundry-provision)。
 Provision 必须在克隆仓库后的**项目根目录**执行，也就是能够看到 `azure.yaml`、`README.md`、`infra` 和 `src` 的目录；
 不要在 `docs` 或 `src/agent-framework-agent-basic-responses` 目录中执行。
 
@@ -174,20 +162,11 @@ $ctx | Format-List
 
 资源尚未创建时，对应属性为空。实际资源名称只记录在本地验证记录中，不写入通用参考步骤。
 
-## 5. 建议阅读路径
+<a id="agent-lifecycle"></a>
 
-| 目标 | 建议章节 |
-| --- | --- |
-| 理解技术架构 | 第 3、6、7 节 |
-| 将现有 MAF Agent 接入并托管 | 第 7、8、9、10 节 |
-| 验证 Prompt 与 Agent 质量 | 第 11 节 |
-| 查询日志、Trace 与 Monitor | 第 12 节 |
-| 配置安全、Guardrails 与性能测试 | 第 13 节 |
-| 核对实现并清理资源 | 第 14、15、16 节 |
+## 5. Agent 生命周期
 
-## 6. Agent 生命周期
-
-### 6.1 Provision 与 Deploy
+### 5.1 Provision 与 Deploy
 
 | 操作 | 处理对象 | 是否生成 Agent 版本 |
 | --- | --- | --- |
@@ -196,9 +175,7 @@ $ctx | Format-List
 | `azd deploy` | Hosted Agent 代码和运行配置 | 是 |
 | `azd ai agent endpoint update` | Endpoint/Card 配置 | 通常不生成代码版本 |
 
-不要把基础设施创建与 Agent 代码部署混为同一步。
-
-### 6.2 Prompt Agent 与 Hosted Agent
+### 5.2 Prompt Agent 与 Hosted Agent
 
 | 类型 | 适用场景 | 部署方式 |
 | --- | --- | --- |
@@ -210,9 +187,9 @@ xAgent 采用 Hosted Agent，支持 Python 自定义代码、依赖管理、版�
 <a id="agent-code"></a>
 <a id="hosting-adaptation"></a>
 
-## 7. 为现有 MAF Agent 增加 Foundry Hosting 协议层
+## 6. 为现有 MAF Agent 增加 Foundry Hosting 协议层
 
-### 7.1 先选择协议
+### 6.1 先选择协议
 
 Foundry Hosted Agent 的要求是：代码必须实现并声明所选协议，而不是必须使用 `ResponsesHostServer`。
 
@@ -226,7 +203,7 @@ Foundry Hosted Agent 的要求是：代码必须实现并声明所选协议，�
 对 MAF Agent，`ResponsesHostServer` 是最直接的官方适配器，还负责 HTTP Server、健康检查和 OpenTelemetry 集成，
 所以本 Lab 推荐使用它。若改用 Invocations 或其他兼容库，必须同步修改代码、`azure.yaml` 协议声明、本地调用和测试方式。
 
-### 7.2 本 Lab 的 Responses 接入
+### 6.2 本 Lab 的 Responses 接入
 
 接入时不重写 Agent 业务逻辑，只增加一个薄的 Responses Hosting 入口。参考 `main.py` 完成四件事：
 
@@ -250,7 +227,7 @@ ResponsesHostServer(agent).run()
 
 `create_agent()` 代表已有实现。不要把现有 Tool、Workflow 和 Prompt 搬进 xAgent 示例指令，也不要为了托管而复制业务代码。
 
-### 7.3 Hosting 接入检查清单
+### 6.3 Hosting 接入检查清单
 
 | 检查项 | 要求 |
 | --- | --- |
@@ -274,7 +251,7 @@ Responses Protocol 管理。生产应用仍应绑定 tenant、user、business se
 
 <a id="foundry-provision"></a>
 
-## 8. 创建 Foundry 资源
+## 7. 创建 Foundry 资源
 
 本节说明如何创建自己的实验资源。如果只需阅读架构或查看现有环境，可跳过首次 Provision。
 
@@ -288,7 +265,7 @@ Test-Path .\azure.yaml
 
 `Test-Path` 应返回 `True`。如果已经克隆并打开仓库，只需切换到包含 `azure.yaml` 的目录，无需再次克隆。
 
-### 8.1 前置检查
+### 7.1 前置检查
 
 ```powershell
 az account show
@@ -298,7 +275,7 @@ azd extension list
 
 需要有效 Azure Subscription、目标 RG 创建权限、Foundry azd 扩展、目标区域模型支持和可用配额。
 
-### 8.2 先预览再创建
+### 7.2 先预览再创建
 
 首次使用本仓库时，先创建本地 azd environment。名称只用于区分本机上的不同部署，不是固定的 Azure 资源名称：
 
@@ -333,7 +310,7 @@ $ctx = .\scripts\get-lab-context.ps1
 
 `azd env get-values` 可能包含环境配置。对外共享前应删除订阅、租户、endpoint、连接信息和其他敏感字段。
 
-### 8.3 创建并连接 Observability 资源
+### 7.3 创建并连接 Observability 资源
 
 `observability.bicep` 默认基于 Resource Group ID 生成稳定且环境唯一的后缀。先执行 What-if，再部署：
 
@@ -363,19 +340,17 @@ python scripts/connect_observability.py
 
 <a id="local-debug"></a>
 
-## 9. 本地 Hosting 兼容性验证
+## 8. 本地 Hosting 兼容性验证
 
 现有 Agent 的业务功能已经在本地验证。本节只确认新增 Hosting 层、身份、模型连接和 Responses Protocol
 可以在部署前正常工作，不重复介绍既有业务功能的开发与调试。
 
-### 9.1 可选：使用 MAF DevUI 检查 Agent 行为
+### 8.1 可选：使用 MAF DevUI 检查 Agent 行为
 
 [Microsoft Agent Framework DevUI](https://learn.microsoft.com/agent-framework/devui/?pivots=programming-language-python)
 是用于本地运行、交互测试和调试 MAF Agent/Workflow 的轻量示例应用，支持 Tool、文件输入、OpenAI-compatible API
 和 OpenTelemetry Trace。它适合在增加 Hosting 协议层前后快速检查 Agent 行为，但不替代 Foundry 远程 smoke test、
 Evaluation、Guardrails、Trace、Monitor 或性能测试，也不应用作生产 UI。
-
-本仓库的 `devui.py` 与托管入口复用同一个 `create_agent()`，因此 DevUI 和 `ResponsesHostServer` 测试的是同一个 xAgent 实现。
 
 独立运行本实验：
 
@@ -394,19 +369,21 @@ Windows 将两处 `.venv-dev/bin/python` 改为 `.venv-dev\Scripts\python.exe`�
 
 ![MAF DevUI 中的 xAgent 对话与 Events](images/devui-agent-behavior.png)
 
-上图显示同一个 `create_agent()` 在本地 DevUI 中完成响应，并在 Events 面板记录 Responses 事件。
-DevUI 用于本地行为检查，不替代 Hosted Agent 的远程验证。
+图中 Events 面板显示 Responses 事件顺序。DevUI 用于本地行为检查，不替代 Hosted Agent 的远程验证。
 
-### 9.2 验证部署依赖
+### 8.2 验证部署依赖
 
 使用将要提交给远程构建的依赖清单创建干净环境，避免“本机能运行但远程缺包”：
 
 ```powershell
-uv venv .venv --python 3.13
-uv pip install --python .\.venv\Scripts\python.exe -r requirements.txt
+uv venv .venv-hosting --python 3.13
+uv pip install --python .\.venv-hosting\Scripts\python.exe `
+  -r .\src\agent-framework-agent-basic-responses\requirements.txt
 ```
 
-### 9.3 启动 Hosting Server 并调用
+macOS/Linux 将 Python 路径改为 `.venv-hosting/bin/python`。
+
+### 8.3 启动 Hosting Server 并调用
 
 在项目根目录执行：
 
@@ -423,7 +400,7 @@ azd ai agent invoke --local "<自定义业务 smoke test prompt>"
 
 本地调用的就绪条件是日志出现 `Running` 或等价的服务器就绪信息；`Starting agent` 不代表服务已经可用。
 
-### 9.4 通过标准
+### 8.4 通过标准
 
 1. `ResponsesHostServer` 达到就绪状态；
 2. 本地 invoke 返回现有 Agent 的预期业务响应；
@@ -431,22 +408,14 @@ azd ai agent invoke --local "<自定义业务 smoke test prompt>"
 4. 缺少必要环境变量时快速失败并给出明确错误；
 5. 使用干净虚拟环境仍能运行，证明依赖清单完整。
 
-### 9.5 Windows 长路径
-
-如果安装成功但运行时报模块缺失，应先检查路径长度，而不是立即降级 Agent Framework：
-
-1. 把项目放到短路径；
-2. 启用 Windows Long Paths；
-3. 临时使用 `subst X: <AgentRoot>` 并从 `X:\` 运行；
-4. 重建 `.venv`，不要复用不完整环境。
-
 <a id="hosted-deployment"></a>
 
-## 10. 托管部署
+## 9. 托管部署
 
-本节说明 Manifest、部署命令和 Agent 版本状态验证。首次远程构建可能需要较长时间，应等待状态进入可用后再调用。
+本节说明 Manifest、部署命令和 Agent 版本验证。部署完成后，先运行 `azd ai agent show --output json`；确认目标版本状态为
+`active` 或 `deployed`，并且 Responses endpoint 已生成，再执行远程调用。
 
-### 10.1 Direct Code Deployment
+### 9.1 Direct Code Deployment
 
 `azure.yaml` 中需要声明 Direct Code Deployment。以下是本仓库示例，应将 `entryPoint` 调整为实际 Hosting 入口：
 
@@ -459,7 +428,7 @@ codeConfiguration:
 
 Foundry 接收源代码并远程解析依赖，不需要本地 Docker 或 ACR。
 
-### 10.2 部署和验证
+### 9.2 部署和验证
 
 ```powershell
 $env:AZURE_DEV_USER_AGENT = 'microsoft_foundry_skill'
@@ -473,9 +442,9 @@ azd ai agent invoke "<自定义业务 smoke test prompt>"
 每次成功部署都会生成不可变 Agent 版本。验收条件：状态为 `active` 或 `deployed`、Responses endpoint 存在、
 远程 invoke 成功，并且回答满足既有业务验收条件。
 
-## 11. Foundry 部署后测试策略
+## 10. Foundry 部署后测试策略
 
-### 11.1 测试金字塔
+### 10.1 测试金字塔
 
 | 层级 | 目标 | 是否调用模型 |
 | --- | --- | --- |
@@ -502,7 +471,7 @@ azd ai agent invoke "<自定义业务 smoke test prompt>"
 
 <a id="prompt-testing"></a>
 
-### 11.2 Smoke Test
+### 10.2 Smoke Test
 
 | 编号 | 输入 | 预期 |
 | --- | --- | --- |
@@ -538,7 +507,7 @@ python scripts/invoke_hosted.py "<自定义业务 smoke test prompt>"
 Invocation failures recorded: 0
 ```
 
-### 11.3 契约测试
+### 10.3 契约测试
 
 ```powershell
 python -m unittest discover -s tests -v
@@ -549,7 +518,7 @@ Direct Code Deployment 和模型配置。接入现有 Agent 时应保留这些�
 
 <a id="evaluation"></a>
 
-### 11.4 Evaluation
+### 10.4 Evaluation
 
 ```powershell
 cd .\src\agent-framework-agent-basic-responses
@@ -571,7 +540,7 @@ azd ai agent eval show
 评估结果应记录实际解析的 Agent 版本、Dataset 版本和 Evaluator 版本。Guardrail 在输入阶段阻断请求时，
 由于没有 Agent response，Judge 可能记录 `errored`；安全结果应结合 HTTP `content_filter` 证据单独判定。
 
-### 11.5 Foundry Portal 运行评估
+### 10.5 Foundry Portal 运行评估
 
 Portal 当前提供多条入口，菜单名以 **Foundry (new)** 为准：
 
@@ -586,7 +555,7 @@ Portal 当前提供多条入口，菜单名以 **Foundry (new)** 为准：
 
 Target-based Evaluation 适用于同步、非流式 Responses/Invocations。A2A、Activity、长时任务或纯流式模式应改用 Trace Evaluation。
 
-### 11.6 质量门禁建议
+### 10.6 质量门禁建议
 
 | 指标 | 建议门槛 | 说明 |
 | --- | ---: | --- |
@@ -598,7 +567,7 @@ Target-based Evaluation 适用于同步、非流式 Responses/Invocations。A2A�
 | Run success rate | >= 95% | 低于该值应排查失败 Session |
 | P95 end-to-end latency | 按场景设定 | 先记录业务基线，不盲目给统一 SLA |
 
-## 12. 日志、Trace 与故障排查
+## 11. 日志、Trace 与故障排查
 
 诊断顺序：
 
@@ -621,7 +590,7 @@ Target-based Evaluation 适用于同步、非流式 Responses/Invocations。A2A�
 
 <a id="agent-session-logs"></a>
 
-### 12.1 Hosted Session 日志
+### 11.1 Hosted Session 日志
 
 ```powershell
 azd ai agent sessions list --output table
@@ -637,7 +606,7 @@ Sessions 显示运行状态、Agent Version、创建时间和到期时间。出�
 
 <a id="agent-traces"></a>
 
-### 12.2 Foundry Portal Trace
+### 11.2 Foundry Portal Trace
 
 Server-side Tracing 对 Foundry Hosted Agent 可自动启用，无需修改 MAF 代码，但项目必须连接 Application Insights：
 
@@ -681,7 +650,7 @@ Foundry Traces 至少需要外层 Hosted Span 包含：
 
 <a id="agent-monitoring"></a>
 
-### 12.3 Agent Monitoring Dashboard
+### 11.3 Agent Monitoring Dashboard
 
 当前为 Preview：**Build** > 选择 Agent > **Monitor**。
 
@@ -724,7 +693,7 @@ Monitor 是 Traces 和 Evaluation 的聚合视图。先确认页面选择的 Age
 
 Dashboard 与底层遥测截图见[实验三：Monitor Dashboard](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#monitor-dashboard)。
 
-### 12.4 Application Insights 查询
+### 11.4 Application Insights 查询
 
 ```kusto
 let TargetAgentName = "<AGENT_NAME>";
@@ -754,7 +723,7 @@ az monitor app-insights query `
 
 查询结果用于核对底层 Span 和 Token。图中计数会随时间范围和流量变化。
 
-## 13. 安全与治理基线
+## 12. 安全与治理基线
 
 1. 使用 Entra ID、Managed Identity 和 RBAC，不在代码中保存密钥；
 2. 将 Project、Agent、模型和 Tool 权限限制到最小范围；
@@ -767,7 +736,7 @@ az monitor app-insights query `
 
 <a id="guardrails"></a>
 
-### 13.1 Guardrails 不是一个开关
+### 12.1 Guardrails 不是一个开关
 
 生产防护至少分四层：
 
@@ -778,7 +747,7 @@ az monitor app-insights query `
 | Tool 授权 | Entra/RBAC、行列权限、审批、幂等 | 防止越权和高影响动作 |
 | Evaluation | Golden Dataset、质量与安全评估 | 发现质量缺口和回归 |
 
-### 13.2 Portal 创建并分配 Guardrail
+### 12.2 Portal 创建并分配 Guardrail
 
 Agent Guardrails 当前为 Preview：
 
@@ -797,7 +766,7 @@ Agent Guardrails 当前为 Preview：
 Agent-level Guardrail 会覆盖底层模型 Guardrail，因此必须确认 Tool call/response intervention point 是否显式配置。
 配置步骤与策略分配截图见[实验五：Guardrail 配置](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#guardrail-config)。
 
-### 13.3 CLI/REST 绑定 Hosted Agent Guardrail
+### 12.3 CLI/REST 绑定 Hosted Agent Guardrail
 
 官方 `azure.yaml` 形状：
 
@@ -815,7 +784,7 @@ azd env set AZURE_AI_RAI_POLICY_ID $ctx.RaiPolicyId
 
 Guardrail 部署验收以 Agent Version REST 返回的 `definition.rai_config` 为准。
 
-### 13.4 Guardrail 验证
+### 12.4 Guardrail 验证
 
 1. GET Agent Version，确认 `definition.rai_config.rai_policy_name`；
 2. 正常请求应返回 HTTP 200；
@@ -830,7 +799,7 @@ HTTP 200 后由模型拒绝回答，只能证明模型或 Agent 拒绝，不能�
 
 <a id="performance-testing"></a>
 
-### 13.5 性能测试
+### 12.5 性能测试
 
 `azd ai agent invoke` 适合 smoke test，不是负载测试工具。性能测试应使用 Azure Load Testing、k6、Locust 或 JMeter 调用 Responses endpoint，并区分：
 
@@ -865,7 +834,7 @@ python -m locust -f scripts/locustfile.py --headless -u 3 -r 1 -t 90s \
 不要只优化延迟而牺牲任务正确率、安全或 Groundedness。性能基线必须和固定 Evaluation Dataset 一起比较。
 实测参数、结果和 Locust 截图见[实验七：性能基线](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#performance-baseline)。
 
-## 14. 推荐接入顺序
+## 13. 推荐接入顺序
 
 1. 固化现有 MAF Agent 的本地 smoke test 和关键业务 Golden Dataset；
 2. 增加 `ResponsesHostServer`、部署依赖清单和 `azure.yaml`；
@@ -875,7 +844,9 @@ python -m locust -f scripts/locustfile.py --headless -u 3 -r 1 -t 90s \
 6. 连接 Application Insights，检查 Session 日志、Trace 和 Monitor；
 7. 运行质量、安全、Guardrail 和性能测试，形成版本门禁。
 
-## 15. 验证清单
+<a id="validation-checklist"></a>
+
+## 14. 验证清单
 
 | 验收项 | 通过标准 |
 | --- | --- |
@@ -896,7 +867,7 @@ python -m locust -f scripts/locustfile.py --headless -u 3 -r 1 -t 90s \
 
 <a id="cleanup"></a>
 
-## 16. 清理
+## 15. 清理
 
 如果环境不再用于后续验证：
 
@@ -906,7 +877,7 @@ azd down --purge --force
 
 清理前确认当前 azd environment、Resource Group、是否需保留 Evaluation/Trace，以及是否仍有人使用实验环境。
 
-## 17. 官方参考资料
+## 16. 官方参考资料
 
 - [Microsoft Foundry documentation](https://learn.microsoft.com/azure/foundry/)
 - [Foundry Hosted Agents](https://learn.microsoft.com/azure/foundry/agents/concepts/hosted-agents)
