@@ -104,30 +104,27 @@ class ProjectContractTests(unittest.TestCase):
                 self.assertTrue(resolved.is_file(), f"{markdown_path.name}: {target}")
 
     def test_platform_monitoring_evidence_exists_and_is_linked(self):
-        shared_filenames = (
+        lab_filenames = (
             "foundry-monitor-v16.png",
             "foundry-traces-v16.png",
             "foundry-conversations-v16.png",
             "foundry-sessions-v16.png",
             "azure-monitor-genai.png",
             "foundry-guardrail-assignment.png",
-            "guardrail-content-filter-v16.png",
+            "foundry-playground-guardrail-block-v16.png",
             "locust-v16-statistics.png",
+            "azure-monitor-eval-alert.png",
         )
-        for filename in shared_filenames:
+        for filename in lab_filenames:
             image = ROOT / "docs" / "images" / filename
             self.assertTrue(image.is_file(), filename)
             self.assertGreater(image.stat().st_size, 10_000, filename)
-            self.assertIn(f"images/{filename}", REFERENCE_MANUAL)
             self.assertIn(f"images/{filename}", LAB_MANUAL)
+            self.assertNotIn(f"images/{filename}", REFERENCE_MANUAL)
 
         main_only = "devui-agent-behavior.png"
         self.assertIn(f"images/{main_only}", REFERENCE_MANUAL)
         self.assertGreater((ROOT / "docs" / "images" / main_only).stat().st_size, 10_000)
-
-        lab_only = "azure-monitor-eval-alert.png"
-        self.assertIn(f"images/{lab_only}", LAB_MANUAL)
-        self.assertGreater((ROOT / "docs" / "images" / lab_only).stat().st_size, 10_000)
 
     def test_readme_document_navigation_targets_exist(self):
         links = re.findall(r"\]\((docs/[^)]+)\)", README)

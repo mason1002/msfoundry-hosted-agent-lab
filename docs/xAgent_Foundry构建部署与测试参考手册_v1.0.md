@@ -66,6 +66,15 @@ Guardrails 和性能测试。
 
 每个章节同时给出背景、命令和验收条件。只想查询日志、Trace、Prompt 测试或性能测试时，可直接打开对应章节，无需从头执行全部步骤。
 
+### 2.3 两份手册的边界
+
+| 文档 | 主要读者 | 回答的问题 | 内容边界 |
+| --- | --- | --- | --- |
+| 本参考手册 | 开发、架构与平台工程人员 | 如何把已有 MAF Agent 接入、部署并定义测试策略 | 架构、Hosting 接入、Provision、Deploy、测试方法和验收标准 |
+| [性能、安全与 Guardrails 实验手册](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) | 测试、运维与安全人员 | 如何独立执行平台验证并判定结果 | Session、Trace、Monitor、Evaluation、Guardrail、性能和告警的步骤与实测截图 |
+
+平台实测截图集中保留在实验手册。本手册只说明接入方法、原理和验收要求，避免同一证据在两份文档中重复出现。
+
 <a id="architecture"></a>
 
 ## 3. 总体架构
@@ -623,9 +632,8 @@ azd ai agent monitor --session-id <session-id> --type system
 
 Session 日志适合即时排错：容器冷启动、Managed Identity、模型 403/429、依赖错误和 Tool 异常。它不是跨 Session 趋势监控的替代品。
 
-![Foundry Sessions 中的 Hosted Runtime 会话](images/foundry-sessions-v16.png)
-
 Sessions 显示运行状态、Agent Version、创建时间和到期时间。出现 Session 只证明托管运行时已分配执行环境。
+完整操作与平台截图见[实验一：Hosted Session 日志](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#session-logs)。
 
 <a id="agent-traces"></a>
 
@@ -645,10 +653,6 @@ Server-side Tracing 对 Foundry Hosted Agent 可自动启用，无需修改 MAF 
 
 Trace 可能包含 Prompt、输出、Tool 参数和 Tool 返回。必须把 Trace 当作生产数据控制访问、保留期与脱敏策略。
 
-![Foundry Traces 中的 Agent 调用](images/foundry-traces-v16.png)
-
-上图显示已完成的调用、端到端耗时、输入/输出 Token、估算成本和 Agent Version。
-
 #### Sessions、Conversations 与 Traces
 
 | 视图 | 表示什么 | 何时出现 | 空白时检查什么 |
@@ -659,9 +663,6 @@ Trace 可能包含 Prompt、输出、Tool 参数和 Tool 返回。必须把 Trac
 
 Sessions 有记录只能证明托管容器运行过，不能证明请求创建了 Conversation，也不能证明 Trace 已具备 Portal 关联字段。
 `responses.create(input=...)` 可以成功返回并创建 Session，但不会自动出现在 Conversations 视图。
-
-![Foundry Conversations 中的 Responses 对话](images/foundry-conversations-v16.png)
-
 Conversations 聚合同一对话中的调用。需要多轮上下文时，显式创建或传入 Conversation ID。
 
 先检查页面右上角的 **Version** 下拉框。Traces、Conversations 和 Sessions 均按选中的 Agent Version 显示；
@@ -675,6 +676,8 @@ Foundry Traces 至少需要外层 Hosted Span 包含：
 - `gen_ai.agent.name` 和 `gen_ai.agent.version`；
 - `azure.ai.agentserver.responses.response_id`；
 - 使用 Conversation 时还应包含 `azure.ai.agentserver.responses.conversation_id`。
+
+完整操作、Trace 与 Conversation 截图见[实验二：Portal Trace](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#portal-trace)。
 
 <a id="agent-monitoring"></a>
 
@@ -690,10 +693,6 @@ Dashboard 重点查看：
 - Evaluation metrics。
 
 Monitor 右上角 Settings 可配置 Continuous Evaluation、Scheduled Evaluation 和 Alerts；Preview 能力没有生产 SLA，应在非生产环境先验证。
-
-![Foundry Hosted Agent Monitor](images/foundry-monitor-v16.png)
-
-上图显示当前时间范围内的 Agent runs、Token usage、估算成本和错误率。切换时间范围后再比较趋势。
 
 Dashboard 有数据必须同时满足：Hosted Agent 已产生真实流量、Project 已连接 Application Insights、
 平台或应用层 exporter 已配置，并且遥测已完成摄取。可执行：
@@ -723,6 +722,8 @@ Monitor 是 Traces 和 Evaluation 的聚合视图。先确认页面选择的 Age
 
 官方经验阈值提示：Latency 超过 10 秒可能与模型限流、复杂 Tool 或网络有关；Run success rate 低于 95% 应调查。但实际 SLA 必须按业务和负载测试确定。
 
+Dashboard 与底层遥测截图见[实验三：Monitor Dashboard](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#monitor-dashboard)。
+
 ### 12.4 Application Insights 查询
 
 ```kusto
@@ -750,8 +751,6 @@ az monitor app-insights query `
   --resource-group $ctx.ResourceGroup `
   --analytics-query '<KQL>'
 ```
-
-![Application Insights Logs 中的 GenAI Span 与 Token](images/azure-monitor-genai.png)
 
 查询结果用于核对底层 Span 和 Token。图中计数会随时间范围和流量变化。
 
@@ -796,10 +795,7 @@ Agent Guardrails 当前为 Preview：
 
 也可在 Agent Playground 左侧 Guardrails > **Manage** > **Assign a new guardrail**。
 Agent-level Guardrail 会覆盖底层模型 Guardrail，因此必须确认 Tool call/response intervention point 是否显式配置。
-
-![Foundry Guardrails 中的策略分配](images/foundry-guardrail-assignment.png)
-
-上图显示 `Microsoft.DefaultV2` 已应用到 Hosted Agent 和模型。部署验收仍以 Agent Version 的 `rai_config` 为准。
+配置步骤与策略分配截图见[实验五：Guardrail 配置](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#guardrail-config)。
 
 ### 13.3 CLI/REST 绑定 Hosted Agent Guardrail
 
@@ -829,10 +825,7 @@ Guardrail 部署验收以 Agent Version REST 返回的 `definition.rai_config` �
 6. 记录策略版本、Agent 版本、测试样本和实际结果。
 
 使用正常请求和经过审批的合成安全样例分别调用 Hosted Agent。共享证据前遮罩风险文本和 Request ID。
-
-![Guardrail 输入阶段阻断实测](images/guardrail-content-filter-v16.png)
-
-上图来自真实 SDK 调用：合成 Self-harm 样例在输入阶段返回 HTTP 400、`content_filter`。
+Playground 原生阻断截图与 SDK 结果见[实验六：Guardrail 正常与阻断路径](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#guardrail-paths)。
 HTTP 200 后由模型拒绝回答，只能证明模型或 Agent 拒绝，不能替代平台 Guardrail 命中证据。
 
 <a id="performance-testing"></a>
@@ -869,12 +862,8 @@ python -m locust -f scripts/locustfile.py --headless -u 3 -r 1 -t 90s \
 > [!IMPORTANT]
 > 负载测试使用正常请求集。将预期被 Guardrail 阻断的样例混入 Locust 会把安全控制命中错误计算为性能失败。
 
-![Locust Hosted Agent 请求与响应时间统计](images/locust-v16-statistics.png)
-
-本次实测完成 15 次请求、0 失败；平均 14.66 秒，P50 14 秒，P90 16 秒，P95 25 秒。
-样本量较小，只作为当前配置的初始基线，不代表容量上限或生产 SLA。
-
 不要只优化延迟而牺牲任务正确率、安全或 Groundedness。性能基线必须和固定 Evaluation Dataset 一起比较。
+实测参数、结果和 Locust 截图见[实验七：性能基线](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#performance-baseline)。
 
 ## 14. 推荐接入顺序
 
