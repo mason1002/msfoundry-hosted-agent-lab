@@ -68,7 +68,13 @@ if (-not $deploymentName) {
     $deployments = Get-AzdValue 'AI_PROJECT_DEPLOYMENTS'
     if ($deployments) {
         try {
-            $deploymentName = (($deployments | ConvertFrom-Json) | Select-Object -First 1).name
+            try {
+                $deploymentConfig = $deployments | ConvertFrom-Json
+            } catch {
+                $deploymentsJson = "`"$deployments`"" | ConvertFrom-Json
+                $deploymentConfig = $deploymentsJson | ConvertFrom-Json
+            }
+            $deploymentName = ($deploymentConfig | Select-Object -First 1).name
         } catch {
             $deploymentName = $null
         }
