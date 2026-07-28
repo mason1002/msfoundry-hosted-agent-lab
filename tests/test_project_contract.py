@@ -51,7 +51,14 @@ class ProjectContractTests(unittest.TestCase):
             MAIN,
             re.compile(r"(?i)(api[_-]?key|access[_-]?token)\s*=\s*['\"]\S+"),
         )
-        self.assertIn("enable_sensitive_data=False", MAIN)
+        self.assertIn('OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] = "false"', MAIN)
+        self.assertGreaterEqual(MAIN.count('os.getenv("XAGENT_APPLICATIONINSIGHTS_CONNECTION_STRING")'), 2)
+        self.assertIn('os.environ.pop("APPLICATIONINSIGHTS_CONNECTION_STRING", None)', MAIN)
+        self.assertEqual(1, MAIN.count("configure_azure_monitor("))
+        self.assertIn("credential=ManagedIdentityCredential()", MAIN)
+        self.assertIn("span_processors=[FoundryIdentitySpanProcessor()]", MAIN)
+        self.assertIn("configure_observability=configure_hosted_observability", MAIN)
+        self.assertIn("create_span_hook=ResponsesOpenTelemetryHook()", MAIN)
 
     def test_devui_reuses_the_hosted_agent_factory(self):
         self.assertIn("from main import create_agent", DEVUI)

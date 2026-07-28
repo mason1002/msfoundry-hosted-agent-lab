@@ -637,6 +637,29 @@ Server-side Tracing 对 Foundry Hosted Agent 可自动启用，无需修改 MAF 
 
 Trace 可能包含 Prompt、输出、Tool 参数和 Tool 返回。必须把 Trace 当作生产数据控制访问、保留期与脱敏策略。
 
+#### Sessions、Conversations 与 Traces
+
+| 视图 | 表示什么 | 何时出现 | 空白时检查什么 |
+| --- | --- | --- | --- |
+| Sessions | Hosted Runtime 的执行会话；包含状态、Agent Version、日志和文件 | Agent endpoint 被调用并分配运行 Session 后 | Agent Version、readiness、容器日志 |
+| Conversations | Responses API 的持久对话对象 | 请求显式使用 `conversation`，或先通过 Conversations API 创建对话 | 调用是否只用了 `responses.create(input=...)`；是否传入 conversation ID |
+| Traces | 一次 Agent Response 的 OTel 调用链和 Span | App Insights 收到带 Project、Agent Version、Response ID 的 Hosted Agent Span 后 | App Insights 连接、RBAC、Hosted 关联属性和 2–5 分钟索引延迟 |
+
+Sessions 有记录只能证明托管容器运行过，不能证明请求创建了 Conversation，也不能证明 Trace 已具备 Portal 关联字段。
+`responses.create(input=...)` 可以成功返回并创建 Session，但不会自动出现在 Conversations 视图。
+
+先检查页面右上角的 **Version** 下拉框。Traces、Conversations 和 Sessions 均按选中的 Agent Version 显示；
+endpoint 已路由到新版本时，旧版本页面不会显示新版本产生的 Trace。使用 `azd ai agent show --output json`
+确认 routed version，再在 Portal 中选择相同版本。
+
+Foundry Traces 至少需要外层 Hosted Span 包含：
+
+- `gen_ai.provider.name = AzureAI Hosted Agents`；
+- `microsoft.foundry.project.id`；
+- `gen_ai.agent.name` 和 `gen_ai.agent.version`；
+- `azure.ai.agentserver.responses.response_id`；
+- 使用 Conversation 时还应包含 `azure.ai.agentserver.responses.conversation_id`。
+
 <a id="agent-monitoring"></a>
 
 ### 12.3 Agent Monitoring Dashboard
@@ -687,6 +710,9 @@ output tokens: 3835
 ![Application Insights 中的 GenAI Span 与 Token](images/azure-monitor-genai.png)
 
 新建连接、角色或 Agent Version 后可能需要等待摄取和调度周期；不能仅凭请求成功判断 Monitor 已可用。
+
+Monitor 是 Traces 和 Evaluation 的聚合视图。Sessions 有记录但 Traces 为空时，Monitor 仍会显示 Token 0 和空图表。
+先修复 Hosted Trace 关联，再等待 Portal 索引；不要反复创建 Session 作为替代验证。
 
 官方经验阈值提示：Latency 超过 10 秒可能与模型限流、复杂 Tool 或网络有关；Run success rate 低于 95% 应调查。但实际 SLA 必须按业务和负载测试确定。
 

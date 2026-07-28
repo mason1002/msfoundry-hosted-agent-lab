@@ -139,6 +139,17 @@ azd ai agent monitor --session-id <session-id> --type system
 
 注意：Session 日志可能显示 Prompt 和输出。不要直接把完整日志发送给外部人员。
 
+Session 表示 Hosted Runtime 的执行会话，不等同于 Responses Conversation，也不等同于 OTel Trace：
+
+| 对象 | 用途 |
+| --- | --- |
+| Session | 查看运行状态、Agent Version、容器日志和文件 |
+| Conversation | 保存 Responses API 多轮对话；只有显式创建或传入 conversation ID 时出现 |
+| Trace | 查看一次响应的 Agent、模型和 Tool Span；依赖 Application Insights 与 Hosted 关联字段 |
+
+查看 Traces、Conversations 或 Sessions 前，先把页面右上角的 Agent Version 切换到 endpoint 当前路由版本。
+旧版本筛选不会显示新版本产生的数据。
+
 <a id="portal-trace"></a>
 
 ## 5. 实验二：Portal Trace

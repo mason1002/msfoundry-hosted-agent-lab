@@ -109,8 +109,24 @@ def main() -> None:
             "OutputTokens=sum(OutputTokens) by Operation, Agent",
             token_credential.get_token(APP_INSIGHTS_SCOPE).token,
         )
+        hosted = app_insights_query(
+            app_id,
+            "dependencies | where timestamp > ago(24h) "
+            "| extend Provider=tostring(customDimensions['gen_ai.provider.name']), "
+            "ProjectId=tostring(customDimensions['microsoft.foundry.project.id']), "
+            "AgentVersion=tostring(customDimensions['gen_ai.agent.version']), "
+            "ResponseId=tostring(customDimensions['azure.ai.agentserver.responses.response_id']), "
+            "ConversationId=tostring(customDimensions['azure.ai.agentserver.responses.conversation_id']) "
+            f"| where Provider == 'AzureAI Hosted Agents' and AgentVersion == '{version}' "
+            "| summarize Spans=count(), WithProject=countif(isnotempty(ProjectId)), "
+            "WithResponse=countif(isnotempty(ResponseId)), "
+            "WithConversation=countif(isnotempty(ConversationId))",
+            token_credential.get_token(APP_INSIGHTS_SCOPE).token,
+        )
 
-    configured = (
+    hosted_rows = hosted.get("tables", [{}])[0].get("rows", [])
+    hosted_configured = bool(hosted_rows and hosted_rows[0][0] >= 1)
+    configured = hosted_configured or (
         'appinsights_configured=True' in log_text
         or 'xAgent telemetry bootstrap: appinsights=True' in log_text
     )
@@ -118,8 +134,11 @@ def main() -> None:
     print(f"Application Insights configured in container: {configured}")
     print(json.dumps(ingestion, indent=2))
     print(json.dumps(genai, indent=2))
+    print(json.dumps(hosted, indent=2))
     if not configured:
         raise SystemExit(2)
+    if not hosted_rows or hosted_rows[0][0] < 1 or hosted_rows[0][1] < 1 or hosted_rows[0][2] < 1:
+        raise SystemExit("No portal-correlatable Hosted Agent spans were found.")
 
 
 if __name__ == "__main__":
