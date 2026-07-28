@@ -86,10 +86,10 @@ class ProjectContractTests(unittest.TestCase):
     def test_lab_manual_methods_are_independent_and_linked(self):
         links = set(re.findall(r"\]\(#([A-Za-z0-9_-]+)\)", LAB_MANUAL))
         anchors = set(re.findall(r'<a id="([A-Za-z0-9_-]+)"></a>', LAB_MANUAL))
-        self.assertGreaterEqual(len(links), 11)
+        self.assertGreaterEqual(len(links), 10)
         self.assertEqual(set(), links - anchors)
-        self.assertGreaterEqual(LAB_MANUAL.count("| 独立前提 |"), 11)
-        self.assertGreaterEqual(LAB_MANUAL.count("| 通过标准 |"), 11)
+        self.assertGreaterEqual(LAB_MANUAL.count("| 独立前提 |"), 10)
+        self.assertGreaterEqual(LAB_MANUAL.count("| 通过标准 |"), 10)
 
     def test_all_local_markdown_links_resolve(self):
         for markdown_path in (ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md"))):
@@ -232,9 +232,9 @@ class ProjectContractTests(unittest.TestCase):
         self.assertTrue((scripts / "run_ops.sh").is_file())
         self.assertTrue((scripts / "run_ops.cmd").is_file())
 
-    def test_docs_state_hosted_red_team_current_limit(self):
-        self.assertIn("不支持对 Foundry Hosted Agent 运行云端 AI Red Teaming", REFERENCE_MANUAL)
-        self.assertNotIn("本地 Preview Red Team", REFERENCE_MANUAL)
+    def test_docs_do_not_include_unsupported_red_teaming(self):
+        for document in (REFERENCE_MANUAL, LAB_MANUAL):
+            self.assertNotRegex(document, re.compile(r"(?i)red[ -]?team"))
 
     def test_local_dependency_groups_are_separate(self):
         service = ROOT / "src" / "agent-framework-agent-basic-responses"

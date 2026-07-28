@@ -174,7 +174,7 @@ $ctx | Format-List
 | 验证 Prompt 与 Agent 质量 | 第 11 节 |
 | 查询日志、Trace 与 Monitor | 第 12 节 |
 | 配置安全、Guardrails 与性能测试 | 第 13 节 |
-| 核对实现并清理资源 | 第 14、16、17 节 |
+| 核对实现并清理资源 | 第 14、15、16 节 |
 
 ## 6. Agent 生命周期
 
@@ -687,10 +687,9 @@ Dashboard 重点查看：
 - Token usage；
 - Latency；
 - Run success rate；
-- Evaluation metrics；
-- Red teaming results。
+- Evaluation metrics。
 
-Monitor 右上角 Settings 可配置 Continuous Evaluation、Scheduled Evaluation、Red Team Scan 和 Alerts；Preview 能力没有生产 SLA，应在非生产环境先验证。
+Monitor 右上角 Settings 可配置 Continuous Evaluation、Scheduled Evaluation 和 Alerts；Preview 能力没有生产 SLA，应在非生产环境先验证。
 
 ![Foundry Hosted Agent Monitor](images/foundry-monitor-v16.png)
 
@@ -778,7 +777,7 @@ az monitor app-insights query `
 | 模型/Agent Guardrail | 内容风险、Prompt Shield、PII、受保护材料、Task Adherence | 运行时识别和阻断 |
 | Agent 应用策略 | 指令、Schema、输入输出校验、限流 | 业务边界和格式约束 |
 | Tool 授权 | Entra/RBAC、行列权限、审批、幂等 | 防止越权和高影响动作 |
-| Evaluation/Red Team | Golden Dataset、风险安全评估、对抗扫描 | 发现未知缺口和回归 |
+| Evaluation | Golden Dataset、质量与安全评估 | 发现质量缺口和回归 |
 
 ### 13.2 Portal 创建并分配 Guardrail
 
@@ -836,15 +835,9 @@ Guardrail 部署验收以 Agent Version REST 返回的 `definition.rai_config` �
 上图来自真实 SDK 调用：合成 Self-harm 样例在输入阶段返回 HTTP 400、`content_filter`。
 HTTP 200 后由模型拒绝回答，只能证明模型或 Agent 拒绝，不能替代平台 Guardrail 命中证据。
 
-### 13.5 AI Red Teaming
-
-当前不支持对 Foundry Hosted Agent 运行云端 AI Red Teaming。不要在本 Lab 中配置替代的本地攻击流程。
-功能范围更新后，按官方文档确认目标类型、区域和风险类别支持：
-[AI Red Teaming Agent](https://learn.microsoft.com/azure/foundry/concepts/ai-red-teaming-agent)。
-
 <a id="performance-testing"></a>
 
-### 13.6 性能测试
+### 13.5 性能测试
 
 `azd ai agent invoke` 适合 smoke test，不是负载测试工具。性能测试应使用 Azure Load Testing、k6、Locust 或 JMeter 调用 Responses endpoint，并区分：
 
@@ -910,7 +903,7 @@ python -m locust -f scripts/locustfile.py --headless -u 3 -r 1 -t 90s \
 | 遥测 | Application Insights 已连接，能查看 Session 日志和 Trace |
 | Guardrail | Agent Version 返回 `rai_config`，正常与阻断路径均有证据 |
 | 性能 | 能输出冷/热路径 P50/P95、成功率、TTFB 和 Token 基线 |
-| 安全测试 | Golden Dataset、Prompt Injection 与 Red Team 结果可追踪 |
+| 安全测试 | Golden Dataset、Prompt Injection 与 Guardrail 结果可追踪 |
 
 <a id="cleanup"></a>
 
@@ -938,5 +931,4 @@ azd down --purge --force
 - [Agent Monitoring Dashboard](https://learn.microsoft.com/azure/foundry/observability/how-to/how-to-monitor-agents-dashboard)
 - [Guardrails overview](https://learn.microsoft.com/azure/foundry/guardrails/guardrails-overview)
 - [Add guardrails to a hosted agent](https://learn.microsoft.com/azure/foundry/agents/how-to/add-hosted-agent-guardrails)
-- [AI Red Teaming Agent](https://learn.microsoft.com/azure/foundry/concepts/ai-red-teaming-agent)
 - [Azure Sample: Foundry Hosted Agent Framework Demos](https://github.com/Azure-Samples/foundry-hosted-agentframework-demos)
