@@ -1,0 +1,33 @@
+[
+  {
+    "id": "procedural_sequence_correctness",
+    "description": "The response presents Microsoft Foundry Agent workflow steps in a logically correct dependency order, including required preconditions and a clear separation of local testing, deployment, invocation, evaluation, monitoring, versioning, and cleanup.",
+    "weight": 8
+  },
+  {
+    "id": "groundedness_and_no_fabrication",
+    "description": "The response avoids inventing resource names, endpoints, secrets, deployment states, version identifiers, metrics, or completion claims, and uses placeholders or conditional language when details are unavailable.",
+    "weight": 6
+  },
+  {
+    "id": "security_and_secret_handling",
+    "description": "The response gives appropriate security guidance for authentication, least-privilege access, and handling of secrets, and does not echo sensitive values in cleartext.",
+    "weight": 5
+  },
+  {
+    "id": "lifecycle_and_state_awareness",
+    "description": "The response correctly distinguishes operational validation from monitoring and evaluation, and treats versioning, rollback, and cleanup as state-dependent actions without claiming unsupported observations.",
+    "weight": 4
+  },
+  {
+    "id": "concise_procedural_delivery",
+    "description": "The response is compact, instruction-oriented, and focused on the requested workflow without unnecessary digressions while still covering the essential steps.",
+    "weight": 3
+  },
+  {
+    "id": "general_quality",
+    "description": "Other important quality factors not covered by listed criteria.",
+    "weight": 5,
+    "always_applicable": true
+  }
+]

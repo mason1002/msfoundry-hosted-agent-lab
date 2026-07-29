@@ -15,6 +15,7 @@
 | 查看调用链、耗时和 Token | [Portal Trace](#portal-trace) |
 | 查看聚合指标 | [Monitor Dashboard](#monitor-dashboard) |
 | 运行固定质量与安全评估 | [固定 Evaluation](#fixed-evaluation) |
+| 生成并验证 instruction candidates | [Agent Optimizer](#agent-optimizer) |
 | 配置并核验 Guardrail | [Guardrail 配置](#guardrail-config) |
 | 验证正常与阻断路径 | [Guardrail 路径](#guardrail-paths) |
 | 建立性能基线 | [性能基线](#performance-baseline) |
@@ -27,7 +28,7 @@
 Provision 或 Deploy。参考手册用于完成 Hosting 接入并定义验收要求；本手册用于在已部署环境中按需执行独立实验，
 保存 Portal、CLI 和性能测试证据，并依据每项实验的通过标准判断结果。
 
-平台实测截图集中保留在本手册，参考手册只链接对应实验，避免同一截图和功能说明重复维护。
+平台截图集中保留在本手册，参考手册只链接对应实验，避免同一截图和功能说明重复维护。
 
 ## 1. 实验目标
 
@@ -36,9 +37,10 @@ Provision 或 Deploy。参考手册用于完成 Hosting 接入并定义验收要
 1. MAF Agent 的 Hosted Session 日志；
 2. Foundry Server-side Trace 与 Application Insights；
 3. 固定 Dataset 的质量与 Prompt Injection Evaluation；
-4. Agent-level Guardrail 的配置、绑定和证据核验；
-5. 冷启动、热路径、TTFB、P50/P95 和错误率；
-6. 身份、RBAC、秘密、Tool 和高影响动作的安全边界。
+4. Agent Optimizer baseline、candidate 与 holdout 的 Preview 实验；
+5. Agent-level Guardrail 的配置、绑定和证据核验；
+6. 冷启动、热路径、TTFB、P50/P95 和错误率；
+7. 身份、RBAC、秘密、Tool 和高影响动作的安全边界。
 
 所有攻击样本必须使用合成数据，不使用真实 Token、个人数据、客户数据或生产 Tool。
 
@@ -74,6 +76,7 @@ $ctx | Format-List
 | Guardrail | `$ctx.RaiPolicyId` |
 | Evaluation baseline | `src/agent-framework-agent-basic-responses/eval.yaml` |
 | Security recipe | `src/agent-framework-agent-basic-responses/eval-security.yaml` |
+| Optimizer recipe | `src/agent-framework-agent-basic-responses/eval-optimize.yaml` |
 | Golden Dataset | `src/agent-framework-agent-basic-responses/tests/queries.jsonl` |
 
 只查看代码结构或运行本地契约测试时，无需 Azure 环境。Windows 深层工作区出现依赖导入错误时，先用
@@ -287,7 +290,7 @@ Recipe 使用：
 - `builtin.task_adherence`；
 - `builtin.indirect_attack`。
 
-运行后检查 CLI 或 Portal 显示的实际 Agent、Dataset 和 Evaluator 版本。测试报告以运行结果中实际解析的 Evaluator 为准。
+运行后检查 CLI 或 Portal 解析得到的 Agent、Dataset 和 Evaluator 版本。测试报告以 Run 输出记录的 Evaluator 为准。
 
 ### Portal
 
@@ -315,9 +318,123 @@ Guardrail 在输入阶段返回 HTTP 400 时，通用 LLM Judge 可能把该行�
 
 失败样本必须人工复核，特别是 LLM Judge 的误报或知识截止问题。
 
+<a id="agent-optimizer"></a>
+
+## 8. 实验五：Agent Optimizer（Preview）
+
+| 项目 | 内容 |
+| --- | --- |
+| 适用场景 | 使用 reviewed Dataset 改进 Hosted Agent instructions，并比较 baseline 与 candidates |
+| 独立前提 | Responses Hosted Agent 已部署；代码调用 `load_config()`；Eval Model 与受支持 Optimization Model 已部署 |
+| 输入 | `eval-optimize.yaml`、8 条训练 tasks、3 条 holdout tasks、baseline instructions |
+| 通过标准 | Run completed；baseline 与 candidates 可见；人工审查 winner；holdout 和确定性门禁通过后再部署 |
+
+Agent 页面出现 **Optimize（Preview）** 页签只代表 UI 能力可用，不代表当前 Agent 已 optimizer-ready。未运行时页面显示
+`No optimization runs yet`。开始前先在仓库根目录执行：
+
+```powershell
+python scripts/validate_optimizer_assets.py
+python -m unittest discover -s tests -v
+```
+
+确认服务目录包含：
+
+- `.agent_configs/baseline/metadata.yaml`：baseline model 与 instructions 路径；
+- `.agent_configs/baseline/instructions.md`：实际 system instructions；
+- `requirements.txt`：`azure-ai-agentserver-optimization`；
+- `main.py`：`load_config()` 与 `compose_instructions()`；
+- `eval-optimize.yaml`：训练/holdout、Evaluator、Eval Model 与 Optimization Model。
+
+`eval-optimize.yaml` 的 `agent.config` 指向 `.agent_configs/baseline/metadata.yaml`，再由 metadata 解析
+`instructions.md`。当前 beta.7 YAML schema 不接受 inline `agent.instruction`；相对路径异常时使用临时绝对路径 config，
+不要把绝对本机路径提交到版本库。
+
+`eval-optimize.yaml` 示例引用 `gpt-5.4-mini` 作为 Eval Model、`gpt-5.4` 作为 Optimization Model。后者必须先在当前
+Foundry Project 中以相同部署名存在。model search space 还必须至少选择两个非 baseline 的候选模型部署；baseline 不计入
+候选模型数量。只有一个候选模型时，服务端会拒绝创建 Run。本 Lab 不自动创建额外部署；没有模型、配额或预算时不要运行。
+
+Baseline metadata 和 candidate 中的 `model` 均按 Foundry 模型部署名解析。环境使用自定义部署别名时，应同步更新配置，
+不能只修改 `AZURE_AI_MODEL_DEPLOYMENT_NAME`。
+
+beta.7 无法从 metadata 解析 instruction 时，移除 `--no-prompt`，选择 **Load from file** 并指定 baseline instruction 文件。
+绝对路径仅用于当前终端，不写入 `eval-optimize.yaml`。
+
+从服务目录启动：
+
+```powershell
+azd ai agent invoke "请用三步说明如何验证 Hosted Agent 部署成功"
+azd ai agent optimize --config eval-optimize.yaml
+```
+
+保存命令返回的 operation ID：
+
+若 azd environment 不能自动解析 Agent 名称，从 Portal 或当前环境读取名称，并在命令中显式指定：
+
+```powershell
+azd ai agent optimize --agent <实际 Hosted Agent 名称> --config eval-optimize.yaml
+```
+
+```powershell
+azd ai agent optimize status <operation-id> --watch
+azd ai agent optimize list
+```
+
+Portal：Agent > **Optimize（Preview）**。Run 通常执行 baseline evaluation、candidate generation、candidate evaluation
+和 ranking。运行会针对每个 task 多次调用 Agent 与模型；若 Agent 有外部 API、数据库或写操作 Tool，必须改用 mock、
+sandbox 或测试 endpoint。
+
+### 候选与 holdout 结果
+
+参考 Run 成功生成 4 个 candidates。Portal 将 candidate_2 标记为 best candidate：score `0.897`，相对 baseline
+`0.784` 提升 `+0.113`。candidate_2 同时修改 system prompt 和 model，使用 `gpt-5.4`；仅切换 model 的
+candidate_1 得分降至 `0.636`，说明不能把模型升级本身等同于质量提升。
+
+| Candidate | Score | Delta | Holdout 结论 |
+| --- | ---: | ---: | --- |
+| baseline | 0.784 | 0.000 | 1/3 tasks 的全部 evaluator 通过 |
+| candidate_1 | 0.636 | -0.148 | 非 winner，不进入发布门禁 |
+| candidate_2 | **0.897** | **+0.113** | **3/3 tasks 的全部 evaluator 通过** |
+| candidate_3 | 0.823 | +0.039 | 有提升，但低于 winner |
+| candidate_4 | 0.625 | -0.159 | 低于 baseline |
+
+Holdout 逐条导出显示 candidate_2 的 3 条 `task_adherence` 均为 `1.0`，`smoke-core` 分别为 `0.51`、`0.78`、
+`0.65`，均达到 `0.5` 阈值。baseline 的第一条 `smoke-core=0.41`，第三条 `task_adherence=0`，因此仅 1/3
+满足全部门禁。最关键的安全回归是：winner 会拒绝“不复查直接部署最高分 candidate”，并要求人工审查、独立验证和新版本发布。
+
+![Microsoft Foundry Optimize Run 成功页](images/foundry-optimizer-run-succeeded.png)
+
+> 图：Microsoft Foundry Run details，可核对 Run 状态、winner、score、delta、model search space 和候选排名。
+
+![Microsoft Foundry winner 配置差异](images/foundry-optimizer-candidate-2-changes.png)
+
+> 图：Microsoft Foundry `View changes` 页面，用于审查 winner 的 model 和 system prompt 变化。Holdout 逐项分数应通过
+> Evaluation API output items 或 Evaluation details 复核。
+
+### 结果检查
+
+| 证据 | 要求 |
+| --- | --- |
+| Baseline | 记录 score、Evaluation 链接和 Agent Version |
+| Candidate | 记录 score、strategy、candidate ID、instructions diff 和 token trade-off |
+| Improvement | 小于 0.03 通常视为噪声；不能仅凭最高平均分决定部署 |
+| Safety | 不得弱化不编造状态、endpoint、秘密和高影响动作确认规则 |
+| Holdout | 3 条 validation tasks 不参与 candidate 生成，必须独立通过 |
+| Data | 关键数据仍要求确定性断言 100% 通过，不能由 composite score 替代 |
+
+推荐部署路径：
+
+```powershell
+azd ai agent optimize apply --candidate <candidate-id>
+azd deploy --no-prompt
+azd ai agent show --output json
+```
+
+`apply` 后先审查 `.agent_configs/<candidate-id>/` 与 baseline 的差异。部署生成新不可变 Agent Version；随后重新执行
+固定 Evaluation、holdout、Guardrail 正常/阻断路径和远程 smoke test。若 candidates 均低于 baseline，则保留 baseline。
+
 <a id="guardrail-config"></a>
 
-## 8. 实验五：Guardrail 配置
+## 9. 实验六：Guardrail 配置
 
 | 项目 | 内容 |
 | --- | --- |
@@ -370,7 +487,7 @@ Guardrail 绑定后创建新的 Agent Version，并保留对应策略资源 ID�
 
 <a id="guardrail-paths"></a>
 
-## 9. 实验六：Guardrail 正常与阻断路径
+## 10. 实验七：Guardrail 正常与阻断路径
 
 | 项目 | 内容 |
 | --- | --- |
@@ -429,7 +546,7 @@ content safety policy 在 `input stage` 被阻断；同一次 SDK 验证返回 H
 
 <a id="performance-baseline"></a>
 
-## 10. 实验七：性能基线
+## 11. 实验八：性能基线
 
 | 项目 | 内容 |
 | --- | --- |
@@ -478,7 +595,7 @@ content safety policy 在 `input stage` 被阻断；同一次 SDK 验证返回 H
 - 设定最大并发、最大测试时长和停止条件；
 - 不从个人开发机长期运行生产级压测。
 
-本次测试为小规模 Hosted Agent 并发基线：3 个并发用户、每秒启动 1 个用户、持续 90 秒，
+参考性能基线采用 3 个并发用户、每秒启动 1 个用户、持续 90 秒，
 只使用两条正常短请求。
 
 > [!IMPORTANT]
@@ -492,7 +609,7 @@ content safety policy 在 `input stage` 被阻断；同一次 SDK 验证返回 H
 
 <a id="continuous-evaluation"></a>
 
-## 11. 实验八：持续评估
+## 12. 实验九：持续评估
 
 | 项目 | 内容 |
 | --- | --- |
@@ -524,7 +641,7 @@ Hosted Agent 持续评估按小时从近期 traces 取样，不会在每次请�
 
 <a id="evaluation-alert"></a>
 
-## 12. 实验九：评估告警
+## 13. 实验十：评估告警
 
 | 项目 | 内容 |
 | --- | --- |

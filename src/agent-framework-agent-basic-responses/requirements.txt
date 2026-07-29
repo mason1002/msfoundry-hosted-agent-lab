@@ -1,3 +1,4 @@
 agent-framework-foundry
 agent-framework-foundry-hosting>=1.0.0a260630
+azure-ai-agentserver-optimization==1.0.0b1
 azure-monitor-opentelemetry>=1.8.7

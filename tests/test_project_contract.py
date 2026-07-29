@@ -1,4 +1,6 @@
 import re
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -20,6 +22,15 @@ REFERENCE_MANUAL = (
 LAB_MANUAL = (
     ROOT / "docs" / "xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md"
 ).read_text(encoding="utf-8")
+SERVICE_ROOT = ROOT / "src" / "agent-framework-agent-basic-responses"
+RUNTIME_REQUIREMENTS = (SERVICE_ROOT / "requirements.txt").read_text(encoding="utf-8")
+OPTIMIZER_METADATA = (
+    SERVICE_ROOT / ".agent_configs" / "baseline" / "metadata.yaml"
+).read_text(encoding="utf-8")
+OPTIMIZER_INSTRUCTIONS = (
+    SERVICE_ROOT / ".agent_configs" / "baseline" / "instructions.md"
+).read_text(encoding="utf-8")
+OPTIMIZER_RECIPE = (SERVICE_ROOT / "eval-optimize.yaml").read_text(encoding="utf-8")
 
 
 class ProjectContractTests(unittest.TestCase):
@@ -73,6 +84,35 @@ class ProjectContractTests(unittest.TestCase):
             self.assertIn("devui.py", ignore_rules)
             self.assertIn("requirements-dev.txt", ignore_rules)
 
+    def test_hosted_agent_is_optimizer_ready(self):
+        self.assertIn("azure-ai-agentserver-optimization==1.0.0b1", RUNTIME_REQUIREMENTS)
+        self.assertIn("from azure.ai.agentserver.optimization import load_config", MAIN)
+        self.assertIn("OPTIMIZATION_CONFIG_DIR = Path(__file__).resolve().parent", MAIN)
+        self.assertIn("load_config(config_dir=OPTIMIZATION_CONFIG_DIR)", MAIN)
+        self.assertIn("optimization_config.model", MAIN)
+        self.assertIn("optimization_config.compose_instructions()", MAIN)
+        self.assertIn("model: gpt-5.4-mini", OPTIMIZER_METADATA)
+        self.assertIn("instruction_file: instructions.md", OPTIMIZER_METADATA)
+        self.assertIn("Never invent resource names", OPTIMIZER_INSTRUCTIONS)
+        self.assertIn("config: .agent_configs/baseline/metadata.yaml", OPTIMIZER_RECIPE)
+        self.assertIn("name: xagent-foundry-lab", OPTIMIZER_RECIPE)
+        self.assertIn("validation_dataset:", OPTIMIZER_RECIPE)
+        self.assertIn("optimization_model:", OPTIMIZER_RECIPE)
+        self.assertIn('<a id="agent-optimizer"></a>', REFERENCE_MANUAL)
+        self.assertIn('<a id="agent-optimizer"></a>', LAB_MANUAL)
+        self.assertIn("azd ai agent optimize --config eval-optimize.yaml", REFERENCE_MANUAL)
+        self.assertIn("azd ai agent optimize --config eval-optimize.yaml", LAB_MANUAL)
+
+    def test_optimizer_assets_are_valid(self):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "validate_optimizer_assets.py")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
     def test_local_secrets_and_virtual_environments_are_ignored(self):
         self.assertIn("**/.env", GITIGNORE)
         self.assertIn("**/.venv*/", GITIGNORE)
@@ -90,6 +130,26 @@ class ProjectContractTests(unittest.TestCase):
         self.assertEqual(set(), links - anchors)
         self.assertGreaterEqual(LAB_MANUAL.count("| 独立前提 |"), 10)
         self.assertGreaterEqual(LAB_MANUAL.count("| 通过标准 |"), 10)
+
+    def test_optimizer_evidence_belongs_to_lab_manual(self):
+        evidence_files = (
+            "foundry-optimizer-run-succeeded.png",
+            "foundry-optimizer-candidate-2-changes.png",
+        )
+        for filename in evidence_files:
+            image = ROOT / "docs" / "images" / filename
+            self.assertTrue(image.is_file(), filename)
+            self.assertGreater(image.stat().st_size, 10_000, filename)
+            self.assertIn(f"images/{filename}", LAB_MANUAL)
+            self.assertNotIn(f"images/{filename}", REFERENCE_MANUAL)
+
+        self.assertIn(
+            "xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#agent-optimizer",
+            REFERENCE_MANUAL,
+        )
+        self.assertNotIn("score `0.897`", REFERENCE_MANUAL)
+        self.assertIn("candidate_2 标记为 best candidate", LAB_MANUAL)
+        self.assertIn("score `0.897`", LAB_MANUAL)
 
     def test_all_local_markdown_links_resolve(self):
         for markdown_path in (ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md"))):
@@ -248,6 +308,10 @@ class ProjectContractTests(unittest.TestCase):
         deploy = (ROOT / "scripts" / "deploy_existing_agent.py").read_text(encoding="utf-8")
         self.assertIn("def smoke_test(", deploy)
         self.assertIn("Rolled back endpoint", deploy)
+        self.assertNotIn('    ".agent_configs",', deploy)
+        self.assertIn('    "eval-optimize.yaml",', deploy)
+        self.assertIn("OPTIMIZATION_CONFIG_SUFFIXES", deploy)
+        self.assertIn("source.is_symlink()", deploy)
         ensure_role = deploy.split("def ensure_role(", 1)[1].split(
             "def ensure_telemetry_role(", 1
         )[0]

@@ -5,14 +5,15 @@ ms.date: 2026-07-27
 ms.topic: tutorial
 ---
 
-本仓库提供一个可运行的 xAgent 参考实现，展示如何使用 Microsoft Agent Framework、Microsoft Foundry 和 Azure Developer CLI 完成 Agent 的构建、本地测试、托管部署、远程调用与评估。
+本仓库提供一个可运行的 xAgent 参考实现，展示如何使用 Microsoft Agent Framework、Microsoft Foundry 和
+Azure Developer CLI 完成 Agent 的构建、本地测试、托管部署、远程调用、评估与可选的 Agent Optimizer 实验。
 
 ## 文档导航
 
 | 文档 | 定位 | 入口 |
 | --- | --- | --- |
 | Foundry 构建、托管部署与测试参考手册 | Hosting 接入、Provision、Deploy、测试策略与验收标准 | [Markdown](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md) · [PDF](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.pdf) |
-| 性能、安全、遥测与 Guardrails 实验手册 | Session、Trace、Monitor、Evaluation、Guardrail、性能与告警的独立实验和实测截图 | [Markdown](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) · [PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
+| 性能、安全、遥测与 Guardrails 实验手册 | Session、Trace、Monitor、Evaluation、Guardrail、性能与告警的独立实验和平台截图 | [Markdown](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) · [PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
 | 项目首页 | 项目定位、技术路径、关键文件和跨平台测试入口 | [README.md](README.md) |
 
 本文件专门提供 macOS 命令与路径。先按本文件完成环境准备和部署，再使用参考手册理解整体方法，按需进入实验手册执行平台验证。
@@ -26,6 +27,7 @@ ms.topic: tutorial
 | 部署并调用 Hosted Agent | [托管部署](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#hosted-deployment) |
 | 执行 Agent Prompt Smoke Test | [Prompt 测试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#prompt-testing) |
 | 执行批量质量与安全评估 | [Evaluation](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#evaluation) |
+| 优化 Hosted Agent instructions | [Agent Optimizer](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#agent-optimizer) |
 | 查看 Agent Session 日志 | [Hosted Session 日志](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#agent-session-logs) |
 | 查看 Foundry Trace 与 Span | [Foundry Portal Trace](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#agent-traces) |
 | 查看 Monitor 指标与告警 | [Agent Monitoring Dashboard](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#agent-monitoring) |
@@ -41,7 +43,7 @@ Agent Framework Python 代码
   -> 本地 Responses endpoint
   -> azd deploy
   -> Microsoft Foundry 托管 Agent
-  -> azd ai agent invoke / 评估
+  -> azd ai agent invoke / 评估 / Optimize（Preview）
 ```
 
 ## 关键文件
@@ -51,6 +53,9 @@ Agent Framework Python 代码
 | `azure.yaml` | Foundry Project、模型和 Hosted Agent 声明 |
 | `src/agent-framework-agent-basic-responses/main.py` | xAgent 入口与系统指令 |
 | `src/agent-framework-agent-basic-responses/requirements.txt` | Python 运行依赖 |
+| `src/agent-framework-agent-basic-responses/.agent_configs/baseline/` | Agent Optimizer baseline 配置 |
+| `src/agent-framework-agent-basic-responses/eval-optimize.yaml` | Optimizer 训练、holdout、Evaluator 与模型配置 |
+| `scripts/validate_optimizer_assets.py` | 本地校验 Optimizer 配置与 Dataset |
 | `.vscode/tasks.json` | 本地 Agent Server 与 Inspector 任务 |
 | `.vscode/launch.json` | debugpy 调试入口 |
 | `docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md` | 构建、部署、测试与运维参考步骤 |
@@ -179,7 +184,7 @@ azd env get-value AZURE_LOCATION
 ### 预览并确认资源
 
 Preview 只计算资源变化，不创建或修改 Azure 资源。运行后停下来检查输出，确认目标订阅、区域、
-Resource Group、Foundry Project 和模型部署均属于本次实验。
+Resource Group、Foundry Project 和模型部署均属于该实验环境。
 
 ```bash
 export AZURE_DEV_USER_AGENT=microsoft_foundry_skill
@@ -208,7 +213,7 @@ for key in \
 done
 ```
 
-`azd env get-values` 可能包含订阅 ID、资源 ID 和 endpoint。排障时不要把完整输出粘贴到公开聊天、
+`azd env get-values` 可能包含订阅 ID、资源 ID 和 endpoint。排障时不要把完整输出粘贴到公开 Issue、报告或日志，
 Issue 或共享截图中。
 
 ### 安装依赖并本地运行
@@ -410,7 +415,7 @@ done
 | Log Analytics | 从资源组按 `Microsoft.OperationalInsights/workspaces` 类型查询 |
 | 防护栏 | `AZURE_AI_RAI_POLICY_ID` |
 
-部分 azd environment 值包含资源 ID 和 endpoint。只在本地查看，不要把完整输出粘贴到公开聊天、
+部分 azd environment 值包含资源 ID 和 endpoint。只在受控环境查看，不要把完整输出粘贴到公开 Issue、报告或日志，
 Issue 或共享截图中。
 
 ## 常用命令

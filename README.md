@@ -3,7 +3,7 @@
 使用前提：**已有可运行并完成本地验证的 Microsoft Agent Framework（MAF）Agent**。
 xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `ResponsesHostServer` 适配器实现 Responses 协议、
 托管到 Microsoft Foundry Agent Service，
-并使用 Foundry Evaluation、Trace、Monitor、Guardrails 和 Azure Monitor 完成部署后验证。
+并使用 Foundry Evaluation、Agent Optimizer、Trace、Monitor、Guardrails 和 Azure Monitor 完成部署后验证。
 
 本仓库不要求把现有 Agent 重写成 xAgent。接入时保留已有 Agent、Tool、Workflow 和业务指令，
 只复用本仓库中的 Hosting 入口、`azure.yaml`、部署脚本、评估样例和可观测性配置。
@@ -13,7 +13,7 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
 | 文档 | 定位 | 入口 |
 | --- | --- | --- |
 | Microsoft Foundry Agent 托管部署与测试参考手册 | 面向开发、架构和平台工程人员；说明 Hosting 接入、Provision、Deploy、测试策略与验收标准 | [Markdown](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md) · [PDF](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.pdf) |
-| 性能、安全、遥测与 Guardrails 实验手册 | 面向测试、运维和安全人员；提供 Session、Trace、Monitor、Evaluation、Guardrail、性能与告警的独立实验和实测截图 | [Markdown](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) · [PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
+| 性能、安全、遥测与 Guardrails 实验手册 | 面向测试、运维和安全人员；提供 Session、Trace、Monitor、Evaluation、Guardrail、性能与告警的独立实验和平台截图 | [Markdown](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md) · [PDF](docs/xAgent_Foundry性能安全与Guardrails实验手册_v1.0.pdf) |
 | macOS 操作指南 | 面向 Intel 与 Apple Silicon Mac；提供 zsh、Homebrew、az/azd、部署、测试和清理步骤 | [README_macOS.md](README_macOS.md) |
 
 先用参考手册完成端到端接入并确定验收要求，再按需要从实验手册选择验证项目。macOS 用户先阅读操作指南，命令和路径均已按 macOS 环境调整。
@@ -29,6 +29,7 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
 | 部署并调用 Hosted Agent | [托管部署](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#hosted-deployment) |
 | 执行 Agent Prompt Smoke Test | [Prompt 测试](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#prompt-testing) |
 | 执行批量质量与安全评估 | [Evaluation](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#evaluation) |
+| 优化 Hosted Agent instructions | [Agent Optimizer](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#agent-optimizer) |
 | 查看 Agent Session 日志 | [Hosted Session 日志](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#agent-session-logs) |
 | 查看 Foundry Trace 与 Span | [Foundry Portal Trace](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#agent-traces) |
 | 查看 Monitor 指标与告警 | [Agent Monitoring Dashboard](docs/xAgent_Foundry构建部署与测试参考手册_v1.0.md#agent-monitoring) |
@@ -46,7 +47,7 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
   -> 本地 Hosting 兼容性验证
   -> azd deploy
   -> Microsoft Foundry 托管 Agent
-  -> 远程调用 / Evaluation / Trace / Monitor / Guardrails / 性能测试
+  -> 远程调用 / Evaluation / Optimize / Trace / Monitor / Guardrails / 性能测试
 ```
 
 ## 关键文件
@@ -56,6 +57,9 @@ xAgent 是 Hosting 接入参考模板，重点展示如何使用 MAF 的 `Respon
 | `azure.yaml` | Foundry Project、模型和 Hosted Agent 声明 |
 | `src/agent-framework-agent-basic-responses/main.py` | xAgent 入口与系统指令 |
 | `src/agent-framework-agent-basic-responses/requirements.txt` | Python 运行依赖 |
+| `src/agent-framework-agent-basic-responses/.agent_configs/baseline/` | Agent Optimizer 读取的 model 与 instructions baseline |
+| `src/agent-framework-agent-basic-responses/eval-optimize.yaml` | Instruction tuning 的训练集、holdout、Evaluator 与模型配置 |
+| `scripts/validate_optimizer_assets.py` | 不调用 Azure，校验 Optimizer recipe 与 Dataset 隔离 |
 | `src/agent-framework-agent-basic-responses/devui.py` | 复用同一 xAgent 的本地 MAF DevUI 入口 |
 | `src/agent-framework-agent-basic-responses/requirements-dev.txt` | DevUI 本地开发依赖，不参与托管部署 |
 | `.vscode/tasks.json` | 本地 Agent Server 与 Inspector 任务 |

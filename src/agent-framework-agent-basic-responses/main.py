@@ -3,12 +3,14 @@
 import logging
 import os
 from contextvars import ContextVar
+from pathlib import Path
 from typing import Any
 
 from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
 from agent_framework.observability import enable_instrumentation
 from agent_framework_foundry_hosting import ResponsesHostServer
+from azure.ai.agentserver.optimization import load_config
 from azure.ai.agentserver.responses import ResponsesServerOptions
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from azure.monitor.opentelemetry import configure_azure_monitor
@@ -22,6 +24,7 @@ load_dotenv()
 
 logger = logging.getLogger("xagent")
 logger.setLevel(logging.INFO)
+OPTIMIZATION_CONFIG_DIR = Path(__file__).resolve().parent / ".agent_configs"
 
 
 class FoundryIdentitySpanProcessor(SpanProcessor):
@@ -104,12 +107,28 @@ def configure_hosted_observability(
 
 
 def create_agent() -> Agent:
-    model_name = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME") or os.getenv("FOUNDRY_MODEL_NAME")
+    optimization_config = load_config(config_dir=OPTIMIZATION_CONFIG_DIR)
+    model_name = (
+        optimization_config.model if optimization_config else None
+    ) or os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME") or os.getenv("FOUNDRY_MODEL_NAME")
     if not model_name:
         raise RuntimeError(
             "Model deployment name is not configured. Set "
             "AZURE_AI_MODEL_DEPLOYMENT_NAME or FOUNDRY_MODEL_NAME."
         )
+
+    instructions = (
+        optimization_config.compose_instructions()
+        if optimization_config
+        else (
+            "You are xAgent, a concise reference assistant for Microsoft Foundry Agents. "
+            "Explain how to build, run locally, deploy as a hosted agent, invoke, test, "
+            "evaluate, monitor, version, and clean up an Agent Framework application. "
+            "Use short numbered steps when describing a procedure. Distinguish local "
+            "execution from hosted deployment, and never invent resource names, endpoints, "
+            "test results, deployment status, or secret values."
+        )
+    )
 
     client = FoundryChatClient(
         project_endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
@@ -120,14 +139,7 @@ def create_agent() -> Agent:
     return Agent(
         client=client,
         name="xAgent",
-        instructions=(
-            "You are xAgent, a concise reference assistant for Microsoft Foundry Agents. "
-            "Explain how to build, run locally, deploy as a hosted agent, invoke, test, "
-            "evaluate, monitor, version, and clean up an Agent Framework application. "
-            "Use short numbered steps when describing a procedure. Distinguish local "
-            "execution from hosted deployment, and never invent resource names, endpoints, "
-            "test results, or deployment status."
-        ),
+        instructions=instructions,
         # History will be managed by the hosting infrastructure, thus there
         # is no need to store history by the service. Learn more at:
         # https://developers.openai.com/api/reference/resources/responses/methods/create

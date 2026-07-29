@@ -1,0 +1,19 @@
+name: xagent-instruction-optimization
+agent:
+    name: xagent-foundry-lab
+    kind: hosted
+    model: gpt-5.4-mini
+    config: .agent_configs/baseline/metadata.yaml
+dataset:
+    local_uri: datasets/optimizer-train/eval.jsonl
+validation_dataset:
+    local_uri: datasets/optimizer-validation/eval.jsonl
+evaluators:
+    - builtin.task_adherence
+    - name: smoke-core
+      version: "1"
+      local_uri: evaluators/smoke-core/rubric_dimensions.json
+options:
+    eval_model: gpt-5.4-mini
+    optimization_model: gpt-5.4
+    max_candidates: 4

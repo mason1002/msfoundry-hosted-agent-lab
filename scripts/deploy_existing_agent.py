@@ -31,7 +31,6 @@ except ImportError:
 MANAGEMENT_SCOPE = "https://management.azure.com/.default"
 MONITORING_METRICS_PUBLISHER_ROLE = "3913510d-42f4-4e42-8a64-420c390055eb"
 EXCLUDED_NAMES = {
-    ".agent_configs",
     ".agentignore",
     ".azdignore",
     ".dockerignore",
@@ -43,12 +42,24 @@ EXCLUDED_NAMES = {
     "__pycache__",
     "datasets",
     "devui.py",
+    "eval-optimize.yaml",
     "eval.yaml",
     "eval-security.yaml",
     "evaluators",
     "requirements-dev.txt",
     "tests",
 }
+OPTIMIZATION_CONFIG_SUFFIXES = {".json", ".md", ".txt", ".yaml", ".yml"}
+
+
+def should_package(source: Path, relative: Path) -> bool:
+    if not source.is_file() or source.is_symlink():
+        return False
+    if any(part in EXCLUDED_NAMES for part in relative.parts):
+        return False
+    if relative.parts[0] == ".agent_configs":
+        return source.suffix.lower() in OPTIMIZATION_CONFIG_SUFFIXES
+    return True
 
 
 def arm_get(url: str, token: str) -> dict[str, Any]:
@@ -122,7 +133,7 @@ def create_code_zip() -> tuple[Path, str]:
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
         for source in SERVICE_ROOT.rglob("*"):
             relative = source.relative_to(SERVICE_ROOT)
-            if not source.is_file() or any(part in EXCLUDED_NAMES for part in relative.parts):
+            if not should_package(source, relative):
                 continue
             archive.write(source, relative)
     digest = hashlib.sha256(path.read_bytes()).hexdigest()

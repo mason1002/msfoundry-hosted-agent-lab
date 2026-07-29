@@ -16,6 +16,7 @@
 | 部署前验证 Hosting 兼容性 | [本地 Hosting 验证](#local-debug) |
 | 部署并调用 Hosted Agent | [托管部署](#hosted-deployment) |
 | 执行 Prompt Smoke Test 与批量评估 | [Prompt 测试](#prompt-testing) · [Evaluation](#evaluation) |
+| 使用 Dataset 优化 Hosted Agent instructions | [Agent Optimizer](#agent-optimizer) |
 | 查询 Session 日志、Trace 与 Monitor | [Hosted Session 日志](#agent-session-logs) · [Foundry Portal Trace](#agent-traces) · [Agent Monitoring Dashboard](#agent-monitoring) |
 | 配置 Guardrails 并执行性能测试 | [Guardrails](#guardrails) · [性能测试](#performance-testing) |
 | 核对验收项并清理资源 | [验证清单](#validation-checklist) · [清理](#cleanup) |
@@ -31,12 +32,13 @@
 3. 理解 `azd provision`、Hosting 兼容性验证和托管部署的生命周期；
 4. 调用预先部署的 Hosted Agent，并验证版本、状态和 endpoint；
 5. 使用 Portal/CLI 查看 Evaluation、日志、Trace 和 Monitor；
-6. 理解 Guardrail、身份权限、安全测试和资源清理要求。
+6. 将 Hosted Agent 配置为 optimizer-ready，并用 reviewed Dataset 生成和验证 instruction candidates；
+7. 理解 Guardrail、身份权限、安全测试和资源清理要求。
 
 ## 2. 内容范围
 
 本手册假设已有 MAF Agent 已完成业务开发和本地功能测试。内容从 Hosting 接入开始，覆盖 Foundry Project、
-模型部署、Hosted Agent Direct Code Deployment、Responses Protocol、远程 smoke test、Evaluation、Trace、Monitor、
+模型部署、Hosted Agent Direct Code Deployment、Responses Protocol、远程 smoke test、Evaluation、Agent Optimizer、Trace、Monitor、
 Guardrails 和性能测试。
 
 本手册不覆盖 Agent 业务逻辑重写、Prompt 设计基础、Tool/Workflow 开发、业务数据、生产数据库、
@@ -160,7 +162,7 @@ $ctx | Format-List
 | Log Analytics | `$ctx.LogAnalyticsName` |
 | Guardrail resource ID | `$ctx.RaiPolicyId` |
 
-资源尚未创建时，对应属性为空。实际资源名称只记录在本地验证记录中，不写入通用参考步骤。
+资源尚未创建时，对应属性为空。命令和文档应引用动态配置，不应硬编码环境资源名称。
 
 <a id="agent-lifecycle"></a>
 
@@ -463,6 +465,7 @@ azd ai agent invoke "<自定义业务 smoke test prompt>"
 | Local/Hosted 对比 | 本地模型可访问；Agent 已部署 | `scripts/compare_agent.py` | 同样例双端响应与延迟 |
 | 契约测试 | Python 3.13；无需 Azure | `python -m unittest` | Manifest 与安全契约 |
 | 固定 Evaluation | Agent 已部署；服务目录中有 recipe 与 Dataset | `azd ai agent eval` | 分数、reason、版本 |
+| Agent Optimizer | Agent optimizer-ready；训练/holdout Dataset；Eval 与 Optimization Model 已部署 | `azd ai agent optimize` | baseline、candidates、score、candidate ID |
 | Session 日志 | 至少存在一个 Hosted Session | `azd ai agent monitor` | 启动、身份、异常 |
 | Trace/Monitor | Application Insights 已连接；已有流量 | Portal 或 `verify_monitoring.py` | Span、Token、摄取行数 |
 | 顺序流量 | Agent 已部署；Ops 依赖已安装 | `scripts/send_traffic.py` | 成功数、逐请求延迟 |
@@ -492,7 +495,7 @@ python scripts/compare_agent.py --target both
 python scripts/invoke_hosted.py "<自定义业务 smoke test prompt>"
 ```
 
-通过标准：命令退出码为 0；输出包含实际 Agent Version、响应和延迟；对比模式的
+通过标准：命令退出码为 0；输出包含解析得到的 Agent Version、响应和延迟；对比模式的
 `Invocation failures recorded` 为 0。Guardrail 预期阻断应单独记录，不混入普通 smoke 失败率。
 
 真实两样例对比结果（2026-07-27，资源名称已省略）：
@@ -566,6 +569,106 @@ Target-based Evaluation 适用于同步、非流式 Responses/Invocations。A2A�
 | Remote smoke success | 100% | Agent endpoint、身份、模型与协议均可用 |
 | Run success rate | >= 95% | 低于该值应排查失败 Session |
 | P95 end-to-end latency | 按场景设定 | 先记录业务基线，不盲目给统一 SLA |
+
+<a id="agent-optimizer"></a>
+
+### 10.7 Agent Optimizer（Preview）
+
+Agent Optimizer 位于 Evaluation 之后、发布新版本之前。它使用同一 Dataset 评估 baseline，生成新的 instructions、
+skills、Tool descriptions 或模型候选，再对 candidates 复评并排序。该能力当前为 Preview，没有 SLA，不能作为生产发布的
+自动审批器。
+
+本 Lab 默认只启用 **Instruction tuning**。`main.py` 调用 `load_config()`，正常运行时读取
+`.agent_configs/baseline/`；优化运行或应用 candidate 后，同一代码读取优化配置。实际 system instructions 不再只写死在
+Python 代码中，baseline 是可版本化的优化起点。
+
+#### 文件与本地校验
+
+| 文件 | 作用 |
+| --- | --- |
+| `.agent_configs/baseline/metadata.yaml` | baseline model 与 instructions 文件位置 |
+| `.agent_configs/baseline/instructions.md` | Agent 实际使用的 baseline system instructions |
+| `datasets/optimizer-train/eval.jsonl` | 生成 candidates 使用的 8 条 reviewed tasks |
+| `datasets/optimizer-validation/eval.jsonl` | 不参与 candidate 生成的 3 条 holdout tasks |
+| `evaluators/smoke-core/rubric_dimensions.json` | 领域 rubric evaluator |
+| `eval-optimize.yaml` | Agent、baseline 目录、Dataset、Evaluator、Eval Model 与 Optimization Model |
+| `scripts/validate_optimizer_assets.py` | 检查 JSONL、路径、criteria 和训练/holdout 隔离 |
+
+在仓库根目录先执行不调用 Azure 的检查：
+
+```powershell
+python scripts/validate_optimizer_assets.py
+python -m unittest discover -s tests -v
+```
+
+#### 云端前提与成本边界
+
+1. Hosted Agent 已部署并可通过 `azd ai agent invoke` 调用；
+2. `azure.ai.agents` azd 扩展支持 `optimize` 命令；
+3. Hosted runtime 已安装固定 Preview 依赖 `azure-ai-agentserver-optimization==1.0.0b1`；
+4. Project 中存在 `eval-optimize.yaml` 声明的 Eval Model `gpt-5.4-mini`；
+5. Project 中部署受支持的 Optimization Model；示例 recipe 使用部署名 `gpt-5.4`；
+6. model search space 至少包含两个非 baseline 的候选模型部署。CLI 交互选择模型时，baseline 会被排除；只有一个候选模型时，
+  服务端会返回 `model_search_space must contain at least 2 model names`；
+7. 运行前确认所有候选模型的配额与成本。Optimizer 会按 Dataset 对 baseline 和每个 candidate 多次调用 Agent 与模型；
+8. 有写操作的 Tool 必须改用 sandbox、mock 或测试 endpoint，避免重复收费或修改真实业务状态。
+
+`metadata.yaml` 的 `model` 是 Foundry 模型**部署名**，不是模型目录中的基础模型 ID。Optimizer candidate 可以覆盖该值，
+因此它优先于 `AZURE_AI_MODEL_DEPLOYMENT_NAME`。若环境使用自定义部署别名，应在 baseline metadata 和 candidate 配置中使用
+对应别名，否则调用会返回 model deployment not found。
+
+`azure.yaml` 不自动 Provision `gpt-5.4`，避免基础部署流程隐式创建额外计费资源。若部署名不同，修改
+`eval-optimize.yaml` 的 `options.optimization_model`。
+
+`agent.config` 指向 `.agent_configs/baseline/metadata.yaml`；其中的 `instruction_file` 再解析同目录下的
+`instructions.md`。当前 beta.7 CLI 的错误提示会提到 inline `agent.instruction`，但该版本 YAML schema 不序列化此字段；
+非交互运行应使用 metadata 文件。若 azd 对相对路径解析错误，可生成使用绝对路径的临时 config，不能把本机路径
+提交到版本库。若 beta.7 仍提示 `instruction is required`，移除 `--no-prompt`，选择 **Load from file** 并指定 baseline
+instruction 文件；不要把 instruction 内容或绝对路径写入共享 recipe。
+
+#### 运行与观察
+
+从服务目录执行：
+
+```powershell
+azd ai agent invoke "请用三步说明如何验证 Hosted Agent 部署成功"
+azd ai agent optimize --config eval-optimize.yaml
+azd ai agent optimize list
+azd ai agent optimize status <operation-id> --watch
+```
+
+Portal：**Build** > **Agents** > 选择 Hosted Agent > **Optimize（Preview）**。未运行时显示
+`No optimization runs yet`；成功启动后可查看 baseline、candidate score、策略、Evaluation 链接和 candidate ID。
+
+候选分数、holdout 逐项结果、配置差异和 Portal 截图属于测试与验证证据，统一见
+[性能、安全、遥测与 Guardrails 实验手册：Agent Optimizer](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#agent-optimizer)。
+本手册只定义 Hosting 接入、运行方式、发布门禁和验收标准。
+
+如果当前 azd environment 的 Agent 输出已经过期，自动解析可能提示 `agent name could not be resolved`。此时从
+Portal 或当前环境读取 Agent 名称，并在命令中显式覆盖：
+
+```powershell
+azd ai agent optimize --agent <实际 Hosted Agent 名称> --config eval-optimize.yaml
+```
+
+#### 结果门禁与部署
+
+- composite score 是所有 task/evaluator 的归一化平均值，不保证关键数据 100% 正确；
+- 小于 `0.03` 的提升按官方说明通常属于噪声；
+- 必须人工审查 candidate instructions，确认没有弱化安全、范围或拒绝规则；
+- 必须使用独立 holdout Dataset 复核；关键数据仍使用确定性断言；
+- 若所有 candidates 都低于 baseline，不部署任何 candidate；
+- 推荐先应用到本地，再走正常不可变版本部署：
+
+```powershell
+azd ai agent optimize apply --candidate <candidate-id>
+azd deploy --no-prompt
+azd ai agent show --output json
+azd ai agent invoke "<holdout smoke prompt>"
+```
+
+`optimize apply` 会把候选配置写入 `.agent_configs/<candidate-id>/`。应用前审查 diff；部署后创建新 Agent Version，
+再运行固定 Evaluation、holdout、Guardrail 与远程 smoke test。不要仅因 Portal 标记星号就直接部署到生产。
 
 ## 11. 日志、Trace 与故障排查
 
@@ -832,7 +935,7 @@ python -m locust -f scripts/locustfile.py --headless -u 3 -r 1 -t 90s \
 > 负载测试使用正常请求集。将预期被 Guardrail 阻断的样例混入 Locust 会把安全控制命中错误计算为性能失败。
 
 不要只优化延迟而牺牲任务正确率、安全或 Groundedness。性能基线必须和固定 Evaluation Dataset 一起比较。
-实测参数、结果和 Locust 截图见[实验七：性能基线](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#performance-baseline)。
+参考参数、结果和 Locust 截图见[实验七：性能基线](xAgent_Foundry性能安全与Guardrails实验手册_v1.0.md#performance-baseline)。
 
 ## 13. 推荐接入顺序
 
